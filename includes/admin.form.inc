@@ -23,11 +23,21 @@ function upitt_islandora_inventory_audit_admin_form() {
       'about' => array(
         '#type' => 'item',
         '#markup' => 'Inventory Audit',
+      ),
+      'bigfoot_mapped_path' => array(
+        '#type' => 'textfield',
+        '#title' => 'Bigfoot mapped path on this server',
+        '#description' => 'Ask IT department if this value needs to be set.',
+        '#default_value' => variable_get('upitt_islandora_inventory_audit_bigfoot_mapped_path', '/ingest/holding')
       )
     ),
     'submit' => array(
       '#type' => 'submit',
       '#value' => t('Return'),
+    ),
+    'populate' => array(
+      '#type' => 'submit',
+      '#value' => t('Populate audit table'),
     ),
   );
   return $form;
@@ -45,10 +55,18 @@ function upitt_islandora_inventory_audit_admin_form_submit(array $form, array &$
   $id = $form_state['triggering_element']['#id'];
   switch ($id) {
     case 'edit-submit':
+      variable_set('upitt_islandora_inventory_audit_bigfoot_mapped_path', $form_state['values']['bigfoot_mapped_path']);
+      drupal_set_message('Settings updated');
       drupal_goto('/admin/islandora');
       break;
 
+    case 'edit-populate':
+      module_load_include('inc', 'upitt_islandora_inventory_audit', 'includes/db');
+      upitt_islandora_inventory_audit_populate();
+      break;
+
     case 'edit-reset':
+      variable_del('upitt_islandora_inventory_audit_bigfoot_mapped_path');
       break;
   }
 }

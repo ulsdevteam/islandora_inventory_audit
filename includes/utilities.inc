@@ -5,8 +5,12 @@
  * Utility functions for the Islandora Inventory Audit module.
  */
 
-function upitt_islandora_inventory_audit_foo() {
-  return '';
+/**
+ * Simple function to replicate PHP 5 behaviour
+ */
+function upitt_islandora_inventory_audit_microtime_float() {
+  list($usec, $sec) = explode(" ", microtime());
+  return ((float)$usec + (float)$sec);
 }
 
 function upitt_islandora_inventory_audit_best_date($solr_record) {

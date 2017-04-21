@@ -1,0 +1,76 @@
+<?php
+
+/**
+ * @file
+ * Install/uninstall hooks.
+ */
+
+/**
+ * Implements hook_uninstall().
+ */
+function upitt_islandora_inventory_audit_uninstall() {
+  // no variable_del() needed -- no settings saved in admin form
+}
+
+/**
+* Implementation of hook_schema().
+*/
+function upitt_islandora_inventory_audit_schema() {
+  // create the database table that stores the solr session user keys
+  $schema['upitt_islandora_audit_items'] = array(
+    'description' => t('The results of audit tests for objects in legacy and current systems.'),
+    'fields' => array(
+      'id' => array(
+        'description' => 'The primary identifier for the record',
+        'type' => 'serial',
+        'unsigned' => TRUE,
+        'not null' => TRUE,
+      ),
+      'title' => array(
+        'description' => 'The Islandora Object label value',
+        'type' => 'varchar',
+        'length' => 255,
+        'not null' => FALSE,
+      ),
+      'islandora_pid' => array(
+        'description' => 'The Islandora Object PID value',
+        'type' => 'varchar',
+        'length' => 255,
+        'not null' => FALSE,
+      ),
+      'bigfoot_path' => array(
+        'description' => 'The total number of search results for the search query',
+        'type' => 'varchar',
+        'length' => 255,
+        'not null' => FALSE,
+      ),
+      'equinox_path' => array(
+        'description' => 'Timestamp for record update',
+        'type' => 'varchar',
+        'length' => 255,
+        'not null' => FALSE,
+      ),
+      'workflow_record' => array(
+        'description' => 'the islandora_workflow.item.do_id value that matches the barcode',
+        'type' => 'varchar',
+        'length' => 255,
+        'not null' => FALSE,
+      ),
+    ),
+    'indexes' => array(
+      'ss_islandora_pid' => array('islandora_pid'),
+      'ss_workflow_record' => array('workflow_record'),
+      'ss_bigfoot_path' => array('bigfoot_path'),
+    ),
+    'unique keys' => array(
+      'u_islandora_pid' => array('islandora_pid'),
+      'u_bigfoot_path' => array('bigfoot_path'),
+      'u_equinox_path' => array('equinox_path'),
+      'u_workflow_record' => array('workflow_record'),
+    ),
+    'primary key' => array('id'), //this is last element of array
+  );
+
+  return $schema;
+}
+

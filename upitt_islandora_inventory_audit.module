@@ -1,0 +1,60 @@
+<?php
+
+/**
+ * @file
+ * Defines all the hooks this module implements.
+ *
+ * upitt_islandora_inventory_audit.module: defines paths (drupal menu items) as entry points.
+ *
+ */
+
+// Permissions.
+define('UPITT_ISLANDORA_INVENTORY_AUDIT', 'inventory audit');
+
+/**
+ * Implements hook_menu().
+ */
+function upitt_islandora_inventory_audit_menu() {
+  return array(
+    'admin/islandora/inventory_audit' => array(
+      'title' => 'Islandora Inventory Audit',
+      'description' => 'Settings for the Islandora Inventory Audit module.',
+      'page callback' => 'drupal_get_form',
+      'page arguments' => array('upitt_islandora_inventory_audit_admin_form'),
+      'access arguments' => array(UPITT_ISLANDORA_INVENTORY_AUDIT),
+      'file' => 'includes/admin.form.inc',
+    ),
+    'islandora/object/%islandora_object/manage/audit_upitt_workflow/inventory_audit' => array(
+      'title' => 'Inventory Audit',
+      'page callback' => 'drupal_get_form',
+      'page arguments' => array('upitt_islandora_inventory_audit_form', 2),
+      'type' => MENU_LOCAL_TASK,
+      'file' => 'includes/islandora_object_audit.form.inc',
+      'access arguments' => array(UPITT_ISLANDORA_INVENTORY_AUDIT),
+    ),
+  );
+}
+
+/**
+ * Implements hook_permission().
+ */
+function upitt_islandora_inventory_audit_permission() {
+  return array(
+    UPITT_ISLANDORA_INVENTORY_AUDIT => array(
+      'title' => t('Use the Inventory Audit module'),
+      'description' => t('User can use the Inventory Audit module.'),
+    ),
+  );
+}
+
+function upitt_islandora_inventory_audit_theme() {
+  return array(
+    'upitt_islandora_inventory_audit_audit_markup' => array(
+      'file' => 'theme/theme.inc',
++      'template' => 'theme/audit-markup',
+      'variables' => array(
+        'foo' => NULL,
+      ),
+    ),
+  );
+}

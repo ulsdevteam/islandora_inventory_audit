@@ -1,0 +1,9 @@
+name = Islandora Inventory Audit
+package = Islandora Tools
+description = Reports on the inventory of the same objects across legacy systems and compare to the current ingested objects in our Islandora systems.
+version = 7.x
+core = 7.x
+dependencies[] = islandora
+dependencies[] = islandora_solr
+dependencies[] = upitt_workflow
+configure = admin/islandora/inventory_audit

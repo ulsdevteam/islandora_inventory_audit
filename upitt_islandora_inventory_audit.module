@@ -47,14 +47,18 @@ function upitt_islandora_inventory_audit_permission() {
   );
 }
 
-function upitt_islandora_inventory_audit_theme() {
-  return array(
-    'upitt_islandora_inventory_audit_audit_markup' => array(
-      'file' => 'theme/theme.inc',
-+      'template' => 'theme/audit-markup',
-      'variables' => array(
-        'foo' => NULL,
-      ),
-    ),
-  );
+/**
+ * Implements hook_preprocess_theme().
+ *
+ * This code will remove the sidebar and add CSS if this is the right page.
+ */
+function upitt_islandora_inventory_audit_preprocess_page(&$vars) {
+  $item = menu_get_item();
+  $path = drupal_get_path('module', 'upitt_islandora_inventory_audit');
+  if (is_array($item)) {
+    if (($item['path'] == 'islandora/object/%/manage/audit_upitt_workflow/inventory_audit')) {
+      drupal_add_css($path . '/css/audit_details.css');
+      $vars['page']['sidebar'] = array();
+    }
+  }
 }

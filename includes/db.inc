@@ -216,9 +216,9 @@ function upitt_islandora_inventory_audit_populate_bigfoot_path() {
   if ($handle) {
     $last_barcode = '';
     while (($file = fgets($handle)) !== FALSE) {
-      $path_parts = pathinfo($file);
-      $path = (isset($path_parts['dirname']) ? $path_parts['dirname'] : '/');
-      $parts = explode(".", $file);
+      $path_info = pathinfo($file);
+      $path = (isset($path_info['dirname']) ? $path_info['dirname'] : '/');
+      $fn_parts = explode(".", str_replace($path, "", $file));
       if (/* strstr($file, '.marcxml.xml') || */ strstr($file, '.mods.xml') || strstr($file, '.dc.xml')) {
         $barcode = str_replace(array($path, /* '.marcxml.xml',*/ '.mods.xml', '.dc.xml'),
                 "", $file);
@@ -228,10 +228,11 @@ function upitt_islandora_inventory_audit_populate_bigfoot_path() {
           $last_barcode = $upcase_barcode;
         }
       }
-      elseif (isset($parts[0]) && isset($parts[1]) && ($parts[1] == 'tif' || $parts[1] == 'tiff') && is_numeric($parts[0])) {
-        // For this section, the barcode can come from the last part of the $parts array
-        $barcode = (count($parts) > 0) ? $parts[count($parts) - 1] : '';
-        $pseudo_barcode = $barcode . '-' . $parts[0];
+      elseif (isset($fn_parts[0]) && isset($fn_parts[1]) && ($fn_parts[1] == 'tif' || $fn_parts[1] == 'tiff') && is_numeric($fn_parts[0])) {
+        // For this section, the barcode can come from the last part of the $fn_parts array
+        $path_parts = explode("/", $path);
+        $barcode = (count($path_parts) > 0) ? $path_parts[count($path_parts) - 1] : '';
+        $pseudo_barcode = $barcode . '-' . $fn_parts[0];
         // Look at the filename -- if it looks like it is a page object (####.tif), then add that reference as
         // a barcode value like 31234567809-0041.
         upitt_islandora_inventory_audit_insert('bigfoot_path', array('bigfoot_path' => $path, 'barcode' => $pseudo_barcode));
@@ -411,4 +412,27 @@ function upitt_islandora_inventory_audit_populate_achunkof_islandora_pid($offset
 ' - ' . $_SERVER['REQUEST_URI'] . '
 ' . print_r($e, true));
   }
+}
+
+function upitt_islandora_inventory_all_record_counts() {
+  $results = db_select('upitt_islandora_audit_items_islandora', 'ai')
+            ->fields('ai')
+            ->execute();
+  $num_of_upitt_islandora_audit_items_islandora = $results->rowCount();
+  $results = db_select('upitt_islandora_audit_items_workflow_record', 'aw')
+            ->fields('aw')
+            ->execute();
+  $num_of_upitt_islandora_audit_items_workflow_record = $results->rowCount();
+  $results = db_select('upitt_islandora_audit_items_bigfoot', 'ab')
+            ->fields('ab')
+            ->execute();
+  $num_of_upitt_islandora_audit_items_bigfoot = $results->rowCount();
+  $results = db_select('upitt_islandora_audit_items_equinox', 'ae')
+            ->fields('ae')
+            ->execute();
+  $num_of_upitt_islandora_audit_items_equinox = $results->rowCount();
+  return array('upitt_islandora_audit_items_islandora' => $num_of_upitt_islandora_audit_items_islandora,
+      'upitt_islandora_audit_items_workflow_record' => $num_of_upitt_islandora_audit_items_workflow_record,
+      'upitt_islandora_audit_items_bigfoot' => $num_of_upitt_islandora_audit_items_bigfoot,
+      'upitt_islandora_audit_items_equinox' => $num_of_upitt_islandora_audit_items_equinox);
 }

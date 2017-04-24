@@ -1,6 +1,7 @@
 <?php
 
 define('UPITT_ISLANDORA_INVENTORY_SOLR_LIMIT', 2000000);
+define('UPITT_ISLANDORA_INVENTORY_SOLR_CHUNKSIZE', 50000);
 
 /**
  * @file
@@ -187,7 +188,7 @@ function upitt_islandora_inventory_audit_populate_islandora_pid() {
   // 1) to get the datastreams available on this object
   $query_processor->solrQuery = 'PID:pitt\:*';
   $query_processor->solrStart = 0;
-  $query_processor->solrLimit = UPITT_ISLANDORA_INVENTORY_SOLR_LIMIT;
+  $query_processor->solrLimit = 0;
   $query_processor->solrParams = array('fl' => 'PID');
 
   $url = parse_url(variable_get('islandora_solr_url', 'localhost:8080/solr'));
@@ -199,10 +200,47 @@ function upitt_islandora_inventory_audit_populate_islandora_pid() {
 
     $results = array();
     $numFound = $tmp['response']['numFound'];
-    if ($numFound == UPITT_ISLANDORA_INVENTORY_SOLR_LIMIT) {
-      drupal_set_message(t('The number of objects returned is the same as the maximum limit.  It is likely that there are more objects than ' . UPITT_ISLANDORA_INVENTORY_SOLR_LIMIT));
+    // repeatedly call this to process this many records each time:
+    //   UPITT_ISLANDORA_INVENTORY_SOLR_CHUNKSIZE
+    $offset = 0;
+    while ($offset < $numFound) {
+      upitt_islandora_inventory_audit_populate_achunkof_islandora_pid($offset);
+      $offset += UPITT_ISLANDORA_INVENTORY_SOLR_CHUNKSIZE;
     }
+  }
+  catch (Exception $e) {
+    error_log('EXCEPTION in _save_solr_search_session : called from ' . $_SERVER['SERVER_NAME'] .
+' - ' . $_SERVER['REQUEST_URI'] . '
+' . print_r($e, true));
+  }
 
+  drupal_set_message('exiting upitt_islandora_inventory_audit_populate_islandora_pid');
+}
+
+/**
+ * This will get UPITT_ISLANDORA_INVENTORY_SOLR_CHUNKSIZE islandora PID records at a time.
+ */
+function upitt_islandora_inventory_audit_populate_achunkof_islandora_pid($offset) {
+  module_load_include('inc', 'islandora_solr', 'includes/utilities');
+  $query_processor = new IslandoraSolrQueryProcessor();
+
+  $ret_arr = array();
+  // run two queries --
+  // 1) to get the datastreams available on this object
+  $query_processor->solrQuery = 'PID:pitt\:*';
+  $query_processor->solrStart = 0;
+  $query_processor->solrLimit = UPITT_ISLANDORA_INVENTORY_SOLR_CHUNKSIZE;
+  $query_processor->solrParams = array('fl' => 'PID');
+
+  $url = parse_url(variable_get('islandora_solr_url', 'localhost:8080/solr'));
+  $solr = new Apache_Solr_Service($url['host'], $url['port'], $url['path'] . '/');
+  $solr->setCreateDocuments(FALSE);
+  try {
+    $search_results = $solr->search($query_processor->solrQuery, $query_processor->solrStart, $query_processor->solrLimit, $query_processor->solrParams, 'GET');
+    $tmp = json_decode($search_results->getRawResponse(), TRUE);
+
+    $results = array();
+    $numFound = $tmp['response']['numFound'];
     if ($tmp['response']['numFound'] > 0) {
       foreach ($tmp['response']['docs'] as $k=>$rec) {
         $pid = $rec['PID'];
@@ -216,6 +254,4 @@ function upitt_islandora_inventory_audit_populate_islandora_pid() {
 ' - ' . $_SERVER['REQUEST_URI'] . '
 ' . print_r($e, true));
   }
-  
-  drupal_set_message('exiting upitt_islandora_inventory_audit_populate_islandora_pid');
 }

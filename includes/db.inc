@@ -107,7 +107,7 @@ function upitt_islandora_inventory_audit_populate_workflow_record() {
   $item_query = "SELECT DISTINCT(i.do_id) `do_id` " .
                 "FROM `item` i " .
                 // transaction_action_id of 3 is "ingest completed"
-                "JOIN `transaction` t ON (t.item_id = i.id AND t.transaction_action_id = 3) LIMIT 5";
+                "JOIN `transaction` t ON (t.item_id = i.id AND t.transaction_action_id = 3)";
 
   $result = mysqli_query($link, $item_query);
   if (!$result) {
@@ -136,11 +136,7 @@ function upitt_islandora_inventory_audit_populate_bigfoot_path() {
   foreach ($cdir as $key => $value) {
     if (!in_array($value,array(".",".."))) {
       if (is_dir($dir . '/' . $value)) {
-        drupal_set_message('OBJECT FOLDER ' . $key . ' = ' . $value);
         upitt_islandora_inventory_scan_subfolder($dir . '/' . $value, 'bigfoot');
-      }
-      else {
-        drupal_set_message('NORMAL FILE ' . $key . ' = ' . $value);
       }
     }
   }
@@ -149,13 +145,13 @@ function upitt_islandora_inventory_audit_populate_bigfoot_path() {
 
 function upitt_islandora_inventory_scan_subfolder($subfolder, $inventory_table) {
   $cdir = scandir($subfolder);
-  $barcode_found = FALSE;
+  $barcode_found = $barcode = FALSE;
   foreach ($cdir as $key => $value) {
-    if (!$barcode_found && !in_array($value,array(".",".."))) {
+    if (!in_array($value,array(".",".."))) {
       if (is_dir($subfolder . '/' . $value)) {
-        upitt_islandora_inventory_scan_subfolder($subfolder . '/' . $value, 'bigfoot');
+        $barcode_found = upitt_islandora_inventory_scan_subfolder($subfolder . '/' . $value, 'bigfoot');
       }
-      else {
+      elseif (!$barcode_found) {
         if (strstr($value, '.marcxml.xml') || strstr($value, '.mods.xml') || strstr($value, '.dc.xml')) {
           $barcode = substr($value, 0, strpos($value, '.'));
           $barcode_found = TRUE;
@@ -169,6 +165,7 @@ function upitt_islandora_inventory_scan_subfolder($subfolder, $inventory_table) 
     drupal_set_message('no barcode found in ' . $subfolder . '"');
   }
   drupal_set_message('exiting upitt_islandora_inventory_scan_subfolder');
+  return $barcode;
 }
 
 /**

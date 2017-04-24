@@ -4,7 +4,7 @@
  * @file
  * Administration forms and submit handling for Islandora Inventory Audit.
  */
-
+   
 /**
  * Administration and configuration form for upitt_islandora_inventory_audit.
  *
@@ -39,6 +39,18 @@ function upitt_islandora_inventory_audit_admin_form() {
       '#type' => 'submit',
       '#value' => t('Populate audit table'),
     ),
+    'sync_islandora' => array(
+      '#type' => 'submit',
+      '#value' => t('Sync Islandora'),
+    ),
+    'sync_bigfoot' => array(
+      '#type' => 'submit',
+      '#value' => t('Sync bigfoot'),
+    ),
+    'sync_equinox' => array(
+      '#type' => 'submit',
+      '#value' => t('Sync equinox'),
+    ),
   );
   return $form;
 }
@@ -58,6 +70,26 @@ function upitt_islandora_inventory_audit_admin_form_submit(array $form, array &$
       variable_set('upitt_islandora_inventory_audit_bigfoot_mapped_path', $form_state['values']['bigfoot_mapped_path']);
       drupal_set_message('Settings updated');
       drupal_goto('/admin/islandora');
+      break;
+
+    case 'edit-sync_islandora':
+      module_load_include('inc', 'upitt_islandora_inventory_audit', 'includes/db');
+      upitt_islandora_inventory_audit_sync_islandora();
+      break;
+
+    case 'edit-sync_workflow':
+      module_load_include('inc', 'upitt_islandora_inventory_audit', 'includes/db');
+      upitt_islandora_inventory_audit_sync_workflow();
+      break;
+
+    case 'edit-sync_bigfoot':
+      module_load_include('inc', 'upitt_islandora_inventory_audit', 'includes/db');
+      upitt_islandora_inventory_audit_sync_bigfoot();
+      break;
+
+    case 'edit-sync_equinox':
+      module_load_include('inc', 'upitt_islandora_inventory_audit', 'includes/db');
+      upitt_islandora_inventory_audit_sync_equinox();
       break;
 
     case 'edit-populate':

@@ -28,7 +28,10 @@ function upitt_islandora_inventory_get_record_by_pid($pid) {
   return $query->fetchAssoc();
 }
 
-function upitt_islandora_inventory_audit_populate() {
+/**
+ * This will sync the inventory with what is in Islandora.
+ */
+function upitt_islandora_inventory_audit_sync_islandora() {
   module_load_include('inc', 'upitt_islandora_inventory_audit', 'includes/utilities');
 
   $times_info = array();
@@ -36,34 +39,10 @@ function upitt_islandora_inventory_audit_populate() {
   $time_start = $very_start_time;
 
   $result = db_truncate('{upitt_islandora_audit_items_islandora}')->execute();
-  $result = db_truncate('upitt_islandora_audit_items_workflow_record')->execute();
-  $result = db_truncate('upitt_islandora_audit_items_bigfoot')->execute();
-  $result = db_truncate('upitt_islandora_audit_items_equinox')->execute();
 
   $time_end = upitt_islandora_inventory_audit_microtime_float();
   $time = $time_end - $time_start;
-  $times_info[] = '<b>' . round($time, 2) . ' seconds</b> truncate {upitt_islandora_audit_items} table done';
-
-  // populate by workflow records -- this could also update bigfoot_path entries.
-  $time_start = upitt_islandora_inventory_audit_microtime_float();
-  upitt_islandora_inventory_audit_populate_workflow_record();
-  $time_end = upitt_islandora_inventory_audit_microtime_float();
-  $time = $time_end - $time_start;
-  $times_info[] = '<b>' . round($time, 2) . ' seconds</b> upitt_islandora_inventory_audit_populate_workflow_record done';
-
-  // scan to pick up any folders that were not already added by workflow reference.
-  $time_start = upitt_islandora_inventory_audit_microtime_float();
-  upitt_islandora_inventory_audit_populate_bigfoot_path();
-  $time_end = upitt_islandora_inventory_audit_microtime_float();
-  $time = $time_end - $time_start;
-  $times_info[] = '<b>' . round($time, 2) . ' seconds</b> upitt_islandora_inventory_audit_populate_bigfoot_path done';
-
-  // scan to update the equinox path values.
-  $time_start = upitt_islandora_inventory_audit_microtime_float();
-  upitt_islandora_inventory_audit_populate_equinox_path();
-  $time_end = upitt_islandora_inventory_audit_microtime_float();
-  $time = $time_end - $time_start;
-  $times_info[] = '<b>' . round($time, 2) . ' seconds</b> upitt_islandora_inventory_audit_populate_equinox_path done';
+  $times_info[] = '<b>' . round($time, 2) . ' seconds</b> truncate {upitt_islandora_audit_items_islandora} table done';
 
   // scan the islandora system to see if the objects exist.
   $time_start = upitt_islandora_inventory_audit_microtime_float();
@@ -76,6 +55,103 @@ function upitt_islandora_inventory_audit_populate() {
   $times_info[] = '<b>' . round($time, 2) . '</b> Total time';
 
   drupal_set_message(implode('<br>', $times_info));
+}
+
+/**
+ * This will sync the inventory based on records in the django workflow tables.
+ */
+function upitt_islandora_inventory_audit_sync_workflow() {
+  module_load_include('inc', 'upitt_islandora_inventory_audit', 'includes/utilities');
+
+  $times_info = array();
+  $very_start_time = upitt_islandora_inventory_audit_microtime_float();
+  $time_start = $very_start_time;
+
+  $result = db_truncate('upitt_islandora_audit_items_workflow_record')->execute();
+
+  $time_end = upitt_islandora_inventory_audit_microtime_float();
+  $time = $time_end - $time_start;
+  $times_info[] = '<b>' . round($time, 2) . ' seconds</b> truncate {upitt_islandora_audit_items_workflow_record} table done';
+
+  // populate by workflow records -- this could also update bigfoot_path entries.
+  $time_start = upitt_islandora_inventory_audit_microtime_float();
+  upitt_islandora_inventory_audit_populate_workflow_record();
+  $time_end = upitt_islandora_inventory_audit_microtime_float();
+  $time = $time_end - $time_start;
+  $times_info[] = '<b>' . round($time, 2) . ' seconds</b> upitt_islandora_inventory_audit_populate_workflow_record done';
+
+  $time = $time_end - $very_start_time;
+  $times_info[] = '<b>' . round($time, 2) . '</b> Total time';
+
+  drupal_set_message(implode('<br>', $times_info));
+}
+
+/**
+ * This will sync the inventory of the files on bigfoot.
+ */
+function upitt_islandora_inventory_audit_sync_bigfoot() {
+  module_load_include('inc', 'upitt_islandora_inventory_audit', 'includes/utilities');
+
+  $times_info = array();
+  $very_start_time = upitt_islandora_inventory_audit_microtime_float();
+  $time_start = $very_start_time;
+
+  $result = db_truncate('upitt_islandora_audit_items_bigfoot')->execute();
+
+  $time_end = upitt_islandora_inventory_audit_microtime_float();
+  $time = $time_end - $time_start;
+  $times_info[] = '<b>' . round($time, 2) . ' seconds</b> truncate {upitt_islandora_audit_items_bigfoot} table done';
+
+  // scan to pick up any folders that were not already added by workflow reference.
+  $time_start = upitt_islandora_inventory_audit_microtime_float();
+  upitt_islandora_inventory_audit_populate_bigfoot_path();
+  $time_end = upitt_islandora_inventory_audit_microtime_float();
+  $time = $time_end - $time_start;
+  $times_info[] = '<b>' . round($time, 2) . ' seconds</b> upitt_islandora_inventory_audit_populate_bigfoot_path done';
+
+  $time = $time_end - $very_start_time;
+  $times_info[] = '<b>' . round($time, 2) . '</b> Total time';
+
+  drupal_set_message(implode('<br>', $times_info));
+}
+
+/**
+ * This will sync the inventory of the files on equinox.
+ */
+function upitt_islandora_inventory_audit_sync_equinox() {
+  module_load_include('inc', 'upitt_islandora_inventory_audit', 'includes/utilities');
+
+  $times_info = array();
+  $very_start_time = upitt_islandora_inventory_audit_microtime_float();
+  $time_start = $very_start_time;
+
+  $result = db_truncate('upitt_islandora_audit_items_equinox')->execute();
+
+  $time_end = upitt_islandora_inventory_audit_microtime_float();
+  $time = $time_end - $time_start;
+  $times_info[] = '<b>' . round($time, 2) . ' seconds</b> truncate {upitt_islandora_audit_items_equinox} table done';
+
+  // scan to update the equinox path values.
+  $time_start = upitt_islandora_inventory_audit_microtime_float();
+  upitt_islandora_inventory_audit_populate_equinox_path();
+  $time_end = upitt_islandora_inventory_audit_microtime_float();
+  $time = $time_end - $time_start;
+  $times_info[] = '<b>' . round($time, 2) . ' seconds</b> upitt_islandora_inventory_audit_populate_equinox_path done';
+
+  $time = $time_end - $very_start_time;
+  $times_info[] = '<b>' . round($time, 2) . '</b> Total time';
+
+  drupal_set_message(implode('<br>', $times_info));
+}
+
+/**
+ * This will perform all four areas "sync" functions.
+ */
+function upitt_islandora_inventory_audit_populate() {
+  upitt_islandora_inventory_audit_sync_islandora();
+  upitt_islandora_inventory_audit_sync_workflow();
+  upitt_islandora_inventory_audit_sync_bigfoot();
+  upitt_islandora_inventory_audit_sync_equinox();
 }
 
 /**

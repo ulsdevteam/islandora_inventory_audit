@@ -207,19 +207,45 @@ function upitt_islandora_inventory_audit_populate_bigfoot_path() {
   // while a book is only one object on the bigfoot system, it must create an entry for
   // every page *.tif / *.tiff file as an object record.
 
-  $dir = variable_get('upitt_islandora_inventory_audit_bigfoot_mapped_path', '/ingest/holding');
-  $cdir = scandir($dir);
+  $files_list_path = variable_get('upitt_islandora_inventory_audit_bigfoot_files_mapped_path');
+  if (!$files_list_path) {
+    drupal_set_message('The "Bigfoot files list file" is not configured.  Configure it: ' . l('/admin/islandora/inventory_audit', '/admin/islandora/inventory_audit'), 'error');
+    return;
+  }
 
-  foreach ($cdir as $key => $value) {
-    if (!in_array($value,array(".",".."))) {
-      if (is_dir($dir . '/' . $value)) {
-        upitt_islandora_inventory_scan_subfolder($dir . '/' . $value, 'bigfoot');
-      }
+  $files_list = file($files_list_path);
+  foreach ($files_list as $file) {
+    $path_parts = pathinfo($file);
+    $subfolder = (isset($path_parts['dirname']) ? $path_parts['dirname'] : '/');
+    $parts = explode(".", $value);
+    if (strstr($file, '.marcxml.xml') || strstr($file, '.mods.xml') || strstr($value, '.dc.xml')) {
+      $barcode = substr($value, 0, strpos($value, '.'));
+      upitt_islandora_inventory_audit_insert('bigfoot', array('bigfoot_path' => $subfolder, 'barcode' => $barcode));
+    }
+    elseif (isset($parts[0]) && isset($parts[1]) && ($parts[1] == 'tif' || $parts[1] == 'tiff') && is_numeric($parts[0])) {
+    // Look at the filename -- if it looks like it is a page object (####.tif), then add that reference as
+    // a barcode value like 31234567809-0041.
+      $pseudo_barcode = $barcode . '-' . $parts[0];
+      upitt_islandora_inventory_audit_insert('bigfoot_path', array('bigfoot_path' => $subfolder, 'barcode' => $pseudo_barcode));
     }
   }
   drupal_set_message('exiting upitt_islandora_inventory_audit_populate_bigfoot_path');
 }
 
+/**
+ * Scan to update the equinox path values.
+ */
+function upitt_islandora_inventory_audit_populate_equinox_path() {
+  drupal_set_message('exiting upitt_islandora_inventory_audit_populate_equinox_path');
+}
+
+/**
+ *
+ * @param string $subfolder
+ * @param string $inventory_table
+ * @return string -- will return the barcode value of the folder that was scanned --
+ * that value can be used in recursive calls.
+ */
 function upitt_islandora_inventory_scan_subfolder($subfolder, $inventory_table) {
   $cdir = scandir($subfolder);
   $barcode_found = $barcode = FALSE;
@@ -255,13 +281,6 @@ function upitt_islandora_inventory_scan_subfolder($subfolder, $inventory_table) 
   }
   drupal_set_message('exiting upitt_islandora_inventory_scan_subfolder');
   return $barcode;
-}
-
-/**
- * Scan to update the equinox path values.
- */
-function upitt_islandora_inventory_audit_populate_equinox_path() {
-  drupal_set_message('exiting upitt_islandora_inventory_audit_populate_equinox_path');
 }
 
 /**

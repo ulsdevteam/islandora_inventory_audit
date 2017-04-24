@@ -26,14 +26,20 @@ function upitt_islandora_inventory_audit_admin_form() {
       ),
       'bigfoot_mapped_path' => array(
         '#type' => 'textfield',
-        '#title' => 'Bigfoot mapped path on this server',
+        '#title' => 'Bigfoot files list file on this server',
         '#description' => 'Ask IT department if this value needs to be set.',
-        '#default_value' => variable_get('upitt_islandora_inventory_audit_bigfoot_mapped_path', '/ingest/holding')
+        '#default_value' => variable_get('upitt_islandora_inventory_audit_bigfoot_files_mapped_path')
+      ),
+      'equinox_mapped_path' => array(
+        '#type' => 'textfield',
+        '#title' => 'Equinox files list file on this server',
+        '#description' => 'Ask IT department if this value needs to be set.',
+        '#default_value' => variable_get('upitt_islandora_inventory_audit_equinox_files_mapped_path')
       )
     ),
     'submit' => array(
       '#type' => 'submit',
-      '#value' => t('Return'),
+      '#value' => t('Save Configuration'),
     ),
     'populate' => array(
       '#type' => 'submit',
@@ -72,22 +78,22 @@ function upitt_islandora_inventory_audit_admin_form_submit(array $form, array &$
       drupal_goto('/admin/islandora');
       break;
 
-    case 'edit-sync_islandora':
+    case 'edit-sync-islandora':
       module_load_include('inc', 'upitt_islandora_inventory_audit', 'includes/db');
       upitt_islandora_inventory_audit_sync_islandora();
       break;
 
-    case 'edit-sync_workflow':
+    case 'edit-sync-workflow':
       module_load_include('inc', 'upitt_islandora_inventory_audit', 'includes/db');
       upitt_islandora_inventory_audit_sync_workflow();
       break;
 
-    case 'edit-sync_bigfoot':
+    case 'edit-sync-bigfoot':
       module_load_include('inc', 'upitt_islandora_inventory_audit', 'includes/db');
       upitt_islandora_inventory_audit_sync_bigfoot();
       break;
 
-    case 'edit-sync_equinox':
+    case 'edit-sync-equinox':
       module_load_include('inc', 'upitt_islandora_inventory_audit', 'includes/db');
       upitt_islandora_inventory_audit_sync_equinox();
       break;
@@ -98,7 +104,8 @@ function upitt_islandora_inventory_audit_admin_form_submit(array $form, array &$
       break;
 
     case 'edit-reset':
-      variable_del('upitt_islandora_inventory_audit_bigfoot_mapped_path');
+      variable_del('upitt_islandora_inventory_audit_bigfoot_files_mapped_path');
+      variable_del('upitt_islandora_inventory_audit_equinox_files_mapped_path');
       break;
   }
 }

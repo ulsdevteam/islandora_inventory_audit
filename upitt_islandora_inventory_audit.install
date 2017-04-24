@@ -17,8 +17,8 @@ function upitt_islandora_inventory_audit_uninstall() {
 */
 function upitt_islandora_inventory_audit_schema() {
   // create the database table that stores the solr session user keys
-  $schema['upitt_islandora_audit_items'] = array(
-    'description' => t('The results of audit tests for objects in legacy and current systems.'),
+  $schema['upitt_islandora_audit_items_islandora'] = array(
+    'description' => t('The results of audit tests for islandora objects.'),
     'fields' => array(
       'id' => array(
         'description' => 'The primary identifier for the record',
@@ -38,20 +38,8 @@ function upitt_islandora_inventory_audit_schema() {
         'length' => 255,
         'not null' => FALSE,
       ),
-      'bigfoot_path' => array(
-        'description' => 'The total number of search results for the search query',
-        'type' => 'varchar',
-        'length' => 255,
-        'not null' => FALSE,
-      ),
-      'equinox_path' => array(
-        'description' => 'Timestamp for record update',
-        'type' => 'varchar',
-        'length' => 255,
-        'not null' => FALSE,
-      ),
-      'workflow_record' => array(
-        'description' => 'the islandora_workflow.item.do_id value that matches the barcode',
+      'barcode' => array(
+        'description' => 'The derived barcode value',
         'type' => 'varchar',
         'length' => 255,
         'not null' => FALSE,
@@ -59,18 +47,102 @@ function upitt_islandora_inventory_audit_schema() {
     ),
     'indexes' => array(
       'ss_islandora_pid' => array('islandora_pid'),
-      'ss_workflow_record' => array('workflow_record'),
-      'ss_bigfoot_path' => array('bigfoot_path'),
+      'ss_barcode' => array('barcode'),
     ),
     'unique keys' => array(
       'u_islandora_pid' => array('islandora_pid'),
-      'u_bigfoot_path' => array('bigfoot_path'),
-      'u_equinox_path' => array('equinox_path'),
-      'u_workflow_record' => array('workflow_record'),
     ),
     'primary key' => array('id'), //this is last element of array
   );
 
+  $schema['upitt_islandora_audit_items_workflow_record'] = array(
+    'description' => t('The results of audit tests for objects based on django workflow.'),
+    'fields' => array(
+      'id' => array(
+        'description' => 'The primary identifier for the record',
+        'type' => 'serial',
+        'unsigned' => TRUE,
+        'not null' => TRUE,
+      ),
+      'barcode' => array(
+        'description' => 'the islandora_workflow.item.do_id value that matches the barcode',
+        'type' => 'varchar',
+        'length' => 255,
+        'not null' => FALSE,
+      ),
+    ),
+    'indexes' => array(
+      'ss_barcode' => array('barcode'),
+    ),
+    'unique keys' => array(
+      'u_barcode' => array('barcode'),
+    ),
+    'primary key' => array('id'), //this is last element of array
+  );
+
+  $schema['upitt_islandora_audit_items_bigfoot'] = array(
+    'description' => t('The results of audit tests for object files on the bigfoot server.'),
+    'fields' => array(
+      'id' => array(
+        'description' => 'The primary identifier for the record',
+        'type' => 'serial',
+        'unsigned' => TRUE,
+        'not null' => TRUE,
+      ),
+      'bigfoot_path' => array(
+        'description' => 'The total number of search results for the search query',
+        'type' => 'varchar',
+        'length' => 255,
+        'not null' => FALSE,
+      ),
+      'barcode' => array(
+        'description' => 'the barcode corresponding to the files',
+        'type' => 'varchar',
+        'length' => 255,
+        'not null' => FALSE,
+      ),
+    ),
+    'indexes' => array(
+      'ss_bigfoot_path' => array('bigfoot_path'),
+      'ss_barcode' => array('barcode'),
+    ),
+    'unique keys' => array(
+      'u_bigfoot_path' => array('bigfoot_path'),
+    ),
+    'primary key' => array('id'), //this is last element of array
+  );
+
+  $schema['upitt_islandora_audit_items_equinox'] = array(
+    'description' => t('The results of audit tests for object files on the equinox server.'),
+    'fields' => array(
+      'id' => array(
+        'description' => 'The primary identifier for the record',
+        'type' => 'serial',
+        'unsigned' => TRUE,
+        'not null' => TRUE,
+      ),
+      'equinox_path' => array(
+        'description' => 'Timestamp for record update',
+        'type' => 'varchar',
+        'length' => 255,
+        'not null' => FALSE,
+      ),
+      'barcode' => array(
+        'description' => 'the barcode corresponding to the files',
+        'type' => 'varchar',
+        'length' => 255,
+        'not null' => FALSE,
+      ),
+    ),
+    'indexes' => array(
+      'ss_equinox_path' => array('equinox_path'),
+      'ss_barcode' => array('barcode'),
+    ),
+    'unique keys' => array(
+      'u_equinox_path' => array('equinox_path'),
+    ),
+    'primary key' => array('id'), //this is last element of array
+  );
   return $schema;
 }
 

@@ -26,12 +26,6 @@ function upitt_islandora_inventory_audit_schema() {
         'unsigned' => TRUE,
         'not null' => TRUE,
       ),
-      'title' => array(
-        'description' => 'The Islandora Object label value',
-        'type' => 'varchar',
-        'length' => 255,
-        'not null' => FALSE,
-      ),
       'islandora_pid' => array(
         'description' => 'The Islandora Object PID value',
         'type' => 'varchar',
@@ -107,7 +101,7 @@ function upitt_islandora_inventory_audit_schema() {
       'ss_barcode' => array('barcode'),
     ),
     'unique keys' => array(
-      'u_bigfoot_path' => array('bigfoot_path'),
+      'u_barcode' => array('barcode'),
     ),
     'primary key' => array('id'), //this is last element of array
   );

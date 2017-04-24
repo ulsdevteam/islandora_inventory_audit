@@ -147,10 +147,12 @@ function upitt_islandora_inventory_audit_populate_bigfoot_path() {
 function upitt_islandora_inventory_scan_subfolder($subfolder, $inventory_table) {
   $cdir = scandir($subfolder);
   $barcode_found = $barcode = FALSE;
+  $pages = array();
   foreach ($cdir as $key => $value) {
     if (!in_array($value,array(".",".."))) {
       if (is_dir($subfolder . '/' . $value)) {
-        $barcode_found = upitt_islandora_inventory_scan_subfolder($subfolder . '/' . $value, 'bigfoot');
+        // SKIP folders that are inside the object folders
+        // $barcode_found = upitt_islandora_inventory_scan_subfolder($subfolder . '/' . $value, 'bigfoot');
       }
       elseif (!$barcode_found) {
         if (strstr($value, '.marcxml.xml') || strstr($value, '.mods.xml') || strstr($value, '.dc.xml')) {
@@ -158,10 +160,20 @@ function upitt_islandora_inventory_scan_subfolder($subfolder, $inventory_table) 
           $barcode_found = TRUE;
         }
       }
+      // Look at the filename -- if it looks like it is a page object (####.tif), then add that reference as
+      // a barcode value like 31234567809-0041.
+      $parts = explode(".", $value);
+      if (isset($parts[0]) && isset($parts[1]) && ($parts[1] == 'tif' || $parts[1] == 'tiff') && is_numeric($parts[0])) {
+        $pages[] = '' . $parts[0];
+      }
     }
   }
   if ($barcode_found) {
     upitt_islandora_inventory_audit_insert($inventory_table, array($inventory_table . '_path' => $subfolder, 'barcode' => $barcode));
+    foreach ($pages as $page) {
+      $pseudo_barcode = $barcode . '-' . $page;
+      upitt_islandora_inventory_audit_insert($inventory_table, array($inventory_table . '_path' => $subfolder, 'barcode' => $pseudo_barcode));
+    }
   } else {
     drupal_set_message('no barcode found in ' . $subfolder . '"');
   }

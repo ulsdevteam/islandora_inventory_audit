@@ -73,7 +73,8 @@ function upitt_islandora_inventory_audit_admin_form_submit(array $form, array &$
   $id = $form_state['triggering_element']['#id'];
   switch ($id) {
     case 'edit-submit':
-      variable_set('upitt_islandora_inventory_audit_bigfoot_mapped_path', $form_state['values']['bigfoot_mapped_path']);
+      variable_set('upitt_islandora_inventory_audit_bigfoot_files_mapped_path', $form_state['values']['bigfoot_mapped_path']);
+      variable_set('upitt_islandora_inventory_audit_equinox_files_mapped_path', $form_state['values']['equinox_mapped_path']);
       drupal_set_message('Settings updated');
       drupal_goto('/admin/islandora');
       break;

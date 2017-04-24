@@ -206,28 +206,40 @@ function upitt_islandora_inventory_audit_populate_bigfoot_path() {
   // scan the directory -- finding all folders that qualify as an object on bigfoot...
   // while a book is only one object on the bigfoot system, it must create an entry for
   // every page *.tif / *.tiff file as an object record.
-
   $files_list_path = variable_get('upitt_islandora_inventory_audit_bigfoot_files_mapped_path');
   if (!$files_list_path) {
     drupal_set_message('The "Bigfoot files list file" is not configured.  Configure it: ' . l('/admin/islandora/inventory_audit', '/admin/islandora/inventory_audit'), 'error');
     return;
   }
 
-  $files_list = file($files_list_path);
-  foreach ($files_list as $file) {
-    $path_parts = pathinfo($file);
-    $subfolder = (isset($path_parts['dirname']) ? $path_parts['dirname'] : '/');
-    $parts = explode(".", $value);
-    if (strstr($file, '.marcxml.xml') || strstr($file, '.mods.xml') || strstr($value, '.dc.xml')) {
-      $barcode = substr($value, 0, strpos($value, '.'));
-      upitt_islandora_inventory_audit_insert('bigfoot', array('bigfoot_path' => $subfolder, 'barcode' => $barcode));
+  $handle = fopen($files_list_path, "r");
+  if ($handle) {
+    $last_barcode = '';
+    while (($file = fgets($handle)) !== FALSE) {
+      $path_parts = pathinfo($file);
+      $path = (isset($path_parts['dirname']) ? $path_parts['dirname'] : '/');
+      $parts = explode(".", $file);
+      if (/* strstr($file, '.marcxml.xml') || */ strstr($file, '.mods.xml') || strstr($file, '.dc.xml')) {
+        $barcode = str_replace(array($path, /* '.marcxml.xml',*/ '.mods.xml', '.dc.xml'),
+                "", $file);
+        $upcase_barcode = strtoupper($barcode);
+        if ($last_barcode <> $upcase_barcode) {
+          upitt_islandora_inventory_audit_insert('bigfoot', array('bigfoot_path' => $path, 'barcode' => $barcode));
+          $last_barcode = $upcase_barcode;
+        }
+      }
+      elseif (isset($parts[0]) && isset($parts[1]) && ($parts[1] == 'tif' || $parts[1] == 'tiff') && is_numeric($parts[0])) {
+        // For this section, the barcode can come from the last part of the $parts array
+        $barcode = (count($parts) > 0) ? $parts[count($parts) - 1] : '';
+        $pseudo_barcode = $barcode . '-' . $parts[0];
+        // Look at the filename -- if it looks like it is a page object (####.tif), then add that reference as
+        // a barcode value like 31234567809-0041.
+        upitt_islandora_inventory_audit_insert('bigfoot_path', array('bigfoot_path' => $path, 'barcode' => $pseudo_barcode));
+      }
     }
-    elseif (isset($parts[0]) && isset($parts[1]) && ($parts[1] == 'tif' || $parts[1] == 'tiff') && is_numeric($parts[0])) {
-    // Look at the filename -- if it looks like it is a page object (####.tif), then add that reference as
-    // a barcode value like 31234567809-0041.
-      $pseudo_barcode = $barcode . '-' . $parts[0];
-      upitt_islandora_inventory_audit_insert('bigfoot_path', array('bigfoot_path' => $subfolder, 'barcode' => $pseudo_barcode));
-    }
+    fclose($handle);
+  } else {
+    drupal_set_message('There was a problem opening the file "' . $files_list_path . '".  No inventory could be determined from the bigfoot location.', 'error');
   }
   drupal_set_message('exiting upitt_islandora_inventory_audit_populate_bigfoot_path');
 }
@@ -236,6 +248,44 @@ function upitt_islandora_inventory_audit_populate_bigfoot_path() {
  * Scan to update the equinox path values.
  */
 function upitt_islandora_inventory_audit_populate_equinox_path() {
+  // scan the directory -- finding all folders that qualify as an object on equinox...
+  // while a book is only one object on the equinox system, it must create an entry for
+  // every page *.tif / *.tiff file as an object record.
+  $files_list_path = variable_get('upitt_islandora_inventory_audit_equinox_files_mapped_path');
+  if (!$files_list_path) {
+    drupal_set_message('The "Equinox files list file" is not configured.  Configure it: ' . l('/admin/islandora/inventory_audit', '/admin/islandora/inventory_audit'), 'error');
+    return;
+  }
+
+  $handle = fopen($files_list_path, "r");
+  if ($handle) {
+    $last_barcode = '';
+    while (($file = fgets($handle)) !== FALSE) {
+      $path_parts = pathinfo($file);
+      $path = (isset($path_parts['dirname']) ? $path_parts['dirname'] : '/');
+      $parts = explode(".", $file);
+      if (/* strstr($file, '.marcxml.xml') || */ strstr($file, '.mods.xml') || strstr($file, '.dc.xml')) {
+        $barcode = str_replace(array($path, /* '.marcxml.xml',*/ '.mods.xml', '.dc.xml'),
+                "", $file);
+        if ($last_barcode <> $barcode) {
+          upitt_islandora_inventory_audit_insert('equinox', array('equinox_path' => $path, 'barcode' => $barcode));
+          $last_barcode = $barcode;
+        }
+      }
+      elseif (isset($parts[0]) && isset($parts[1]) && ($parts[1] == 'tif' || $parts[1] == 'tiff') && is_numeric($parts[0])) {
+        // For this section, the barcode can come from the last part of the $parts array
+        $barcode = (count($parts) > 0) ? $parts[count($parts) - 1] : '';
+        $pseudo_barcode = $barcode . '-' . $parts[0];
+        // Look at the filename -- if it looks like it is a page object (####.tif), then add that reference as
+        // a barcode value like 31234567809-0041.
+        upitt_islandora_inventory_audit_insert('equinox_path', array('equinox_path' => $path, 'barcode' => $pseudo_barcode));
+      }
+    }
+    fclose($handle);
+  } else {
+    drupal_set_message('There was a problem opening the file "' . $files_list_path . '".  No inventory could be determined from the equinox location.', 'error');
+  }
+
   drupal_set_message('exiting upitt_islandora_inventory_audit_populate_equinox_path');
 }
 

@@ -47,15 +47,19 @@ function upitt_islandora_inventory_audit_admin_form() {
     ),
     'sync_islandora' => array(
       '#type' => 'submit',
-      '#value' => t('Sync Islandora'),
+      '#value' => t('Inventory Islandora'),
+    ),
+    'sync_workflow' => array(
+      '#type' => 'submit',
+      '#value' => t('Inventory Workflow'),
     ),
     'sync_bigfoot' => array(
       '#type' => 'submit',
-      '#value' => t('Sync bigfoot'),
+      '#value' => t('Inventory bigfoot'),
     ),
     'sync_equinox' => array(
       '#type' => 'submit',
-      '#value' => t('Sync equinox'),
+      '#value' => t('Inventory equinox'),
     ),
   );
   return $form;

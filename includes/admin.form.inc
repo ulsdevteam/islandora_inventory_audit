@@ -16,6 +16,8 @@
  *   The Drupal form definition.
  */
 function upitt_islandora_inventory_audit_admin_form() {
+  module_load_include('inc', 'upitt_islandora_inventory_audit', 'includes/db');
+  $inventory_record_counts = upitt_islandora_inventory_all_record_counts();
   $form = array(
     'frame' => array(
       '#type' => 'fieldset',
@@ -45,21 +47,37 @@ function upitt_islandora_inventory_audit_admin_form() {
       '#type' => 'submit',
       '#value' => t('Populate audit table'),
     ),
-    'sync_islandora' => array(
-      '#type' => 'submit',
-      '#value' => t('Inventory Islandora'),
+    'islandora' => array(
+      '#type' => 'fieldset',
+      '#description' => number_format($inventory_record_counts['upitt_islandora_audit_items_islandora']) . ' records',
+      'sync_islandora' => array(
+        '#type' => 'submit',
+        '#value' => t('Inventory Islandora'),
+      ),
     ),
-    'sync_workflow' => array(
-      '#type' => 'submit',
-      '#value' => t('Inventory Workflow'),
+    'workflow' => array(
+      '#type' => 'fieldset',
+      '#description' => number_format($inventory_record_counts['upitt_islandora_audit_items_workflow_record']) . ' records',
+      'sync_workflow' => array(
+        '#type' => 'submit',
+        '#value' => t('Inventory Workflow'),
+      ),
     ),
-    'sync_bigfoot' => array(
-      '#type' => 'submit',
-      '#value' => t('Inventory bigfoot'),
+    'bigfoot' => array(
+      '#type' => 'fieldset',
+      '#description' => number_format($inventory_record_counts['upitt_islandora_audit_items_bigfoot']) . ' records',
+      'sync_bigfoot' => array(
+        '#type' => 'submit',
+        '#value' => t('Inventory bigfoot'),
+      ),
     ),
-    'sync_equinox' => array(
-      '#type' => 'submit',
-      '#value' => t('Inventory equinox'),
+    'equinox' => array(
+      '#type' => 'fieldset',
+      '#description' => number_format($inventory_record_counts['upitt_islandora_audit_items_equinox']) . ' records',
+      'sync_equinox' => array(
+        '#type' => 'submit',
+        '#value' => t('Inventory equinox'),  
+      ),
     ),
   );
   return $form;

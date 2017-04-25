@@ -42,13 +42,15 @@ function upitt_islandora_inventory_audit_best_date($solr_record) {
  * @return array
  */
 function upitt_islandora_inventory_get_parent_values($object) {
-  $parents = array_merge(
-    $object->relationships->get(FEDORA_RELS_EXT_URI, 'isMemberOfCollection'),
-    $object->relationships->get(FEDORA_RELS_EXT_URI, 'isMemberOf'));
   $parent_pids = array();
-  foreach ($parents as $parent) {
-    if (isset($parent['object']) && isset($parent['object']['value'])) {
-      $parent_pids[] = $parent['object']['value'];
+  if (is_object($object)) {
+    $parents = array_merge(
+      $object->relationships->get(FEDORA_RELS_EXT_URI, 'isMemberOfCollection'),
+      $object->relationships->get(FEDORA_RELS_EXT_URI, 'isMemberOf'));
+    foreach ($parents as $parent) {
+      if (isset($parent['object']) && isset($parent['object']['value'])) {
+        $parent_pids[] = $parent['object']['value'];
+      }
     }
   }
   return $parent_pids;

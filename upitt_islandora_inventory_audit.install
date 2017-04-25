@@ -118,9 +118,9 @@ function upitt_islandora_inventory_audit_schema() {
       'ss_bigfoot_path' => array('bigfoot_path'),
       'ss_barcode' => array('barcode'),
     ),
-    'unique keys' => array(
+/*    'unique keys' => array(
       'u_barcode' => array('barcode'),
-    ),
+    ), */
     'primary key' => array('id'), //this is last element of array
   );
 
@@ -150,9 +150,9 @@ function upitt_islandora_inventory_audit_schema() {
       'ss_equinox_path' => array('equinox_path'),
       'ss_barcode' => array('barcode'),
     ),
-    'unique keys' => array(
+/*    'unique keys' => array(
       'u_equinox_path' => array('equinox_path'),
-    ),
+    ), */
     'primary key' => array('id'), //this is last element of array
   );
   return $schema;

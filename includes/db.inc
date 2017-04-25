@@ -439,10 +439,13 @@ function upitt_islandora_inventory_audit_populate_achunkof_islandora_pid($offset
         $datastream_sizes = upitt_workflow_get_datastreams_sizes($pid);
         $datastream_size_sums = upitt_workflow_sum_datastream_sizes($datastream_sizes);
         $barcode = substr($pid, strpos($pid, ':') + 1);
+        $obj = islandora_object_load($pid);
+        $parents = upitt_islandora_inventory_get_parent_values($obj);
         upitt_islandora_inventory_audit_insert('islandora', array('islandora_pid' => $pid, 
             'barcode' => $barcode,
             'datastreams_latestsize' => $datastream_size_sums['datastreams_latestsize'],
-            'datastreams_totalsize' => $datastream_size_sums['datastreams_totalsize']));
+            'datastreams_totalsize' => $datastream_size_sums['datastreams_totalsize'],
+            'parent_pids' => implode(",", $parents)));
       }
     }
   }

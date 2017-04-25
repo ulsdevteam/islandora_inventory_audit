@@ -20,6 +20,7 @@ function upitt_islandora_inventory_audit_form(array $form, array &$form_state, A
     @list($namespace, $id_no_namespace) = explode(":", $object->id);
     $audit_record = upitt_islandora_inventory_audit_get_record_by_pid($object->id);
 
+    $parents = upitt_islandora_inventory_get_parent_values($object);
     // If the workflow_record value is set, get the status of that record from the database.
     // if (!empty($audit_record['workflow_record'])) {
     // }

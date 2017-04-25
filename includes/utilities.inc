@@ -13,6 +13,12 @@ function upitt_islandora_inventory_audit_microtime_float() {
   return ((float)$usec + (float)$sec);
 }
 
+/**
+ * Given a $solr_record of an object, this will return the preferred date value.
+ *
+ * @param type $solr_record
+ * @return string
+ */
 function upitt_islandora_inventory_audit_best_date($solr_record) {
   $best_date = '';
 
@@ -26,4 +32,24 @@ function upitt_islandora_inventory_audit_best_date($solr_record) {
     }
   }
   return $best_date;
+}
+
+/**
+ * Returns the PID values of the parents to the given object -- uses isMemberOf
+ * as well as isMemberOfCollection to determine parents.
+ *
+ * @param AbstractObject $object
+ * @return array
+ */
+function upitt_islandora_inventory_get_parent_values($object) {
+  $parents = array_merge(
+    $object->relationships->get(FEDORA_RELS_EXT_URI, 'isMemberOfCollection'),
+    $object->relationships->get(FEDORA_RELS_EXT_URI, 'isMemberOf'));
+  $parent_pids = array();
+  foreach ($parents as $parent) {
+    if (isset($parent['object']) && isset($parent['object']['value'])) {
+      $parent_pids[] = $parent['object']['value'];
+    }
+  }
+  return $parent_pids;
 }

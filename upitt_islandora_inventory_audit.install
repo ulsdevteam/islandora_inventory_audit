@@ -32,6 +32,12 @@ function upitt_islandora_inventory_audit_schema() {
         'length' => 255,
         'not null' => FALSE,
       ),
+      'parent_pids' => array(
+        'description' => 'The parent object pid values',
+        'type' => 'varchar',
+        'length' => 255,
+        'not null' => FALSE,
+      ),
       'datastreams_latestsize' => array(
         'description' => 'Total size of the latest version for all datastreams',
         'type' => 'int',

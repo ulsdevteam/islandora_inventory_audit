@@ -4,18 +4,6 @@
  * Class implementation for state field.
  */
 
-/**
- * Custom views handler.
- */
-class upitt_islandora_inventory_audit_views_handler_area_text_custom extends views_handler_area_result {
-  function options_form(&$form, &$form_state) { }
-  function render($empty = FALSE) {
-    global $user;
-    return t('Hello, @name', array('@name' => format_username($user)));
-  }
-}
-
-
 class UpittIslandoraInventoryAuditStateFieldHandler extends views_handler_field {
   /**
    * Inherits.

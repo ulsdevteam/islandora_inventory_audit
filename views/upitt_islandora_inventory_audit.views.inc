@@ -9,46 +9,33 @@
  */
 function upitt_islandora_inventory_audit_views_data() {
   $data = array();
-  $data['views']['upitt_islandora_inventory_audit_area_text_custom'] = array(
-    'title' => t('Custom field'),
-    'help' => t('Just a field created for development purposes.'),
-    'area' => array(
-      'handler' => 'upitt_islandora_inventory_audit_views_handler_area_text_custom',
-    ),
-  );
 
-  return $data;
-}
-
-
-/**
- * Implements hook_views_data().
- */
-function ___upitt_islandora_inventory_audit_views_data() {
-  $data = array();
-
-  $data['islandora_batch_queue'] = array(
+  $data['upitt_islandora_audit_items_islandora'] = array(
     'table' => array(
-      'group' => t('Islandora Batch'),
+      'group' => t('Islandora Inventory Audit'),
       'base' => array(
         'field' => 'id',
         'title' => t('Islandora Inventory Audit'),
         'help' => t('The queue of objects to batch ingest.'),
       ),
       'join' => array(
-        'islandora_batch_queue' => array(
-          'left_field' => 'id',
-          'field' => 'parent',
+        'upitt_islandora_audit_items_bigfoot' => array(
+          'left_field' => 'barcode',
+          'field' => 'barcode',
         ),
-        'islandora_batch_set' => array(
-          'left_field' => 'id',
-          'field' => 'sid',
+        'upitt_islandora_audit_items_equinox' => array(
+          'left_field' => 'barcode',
+          'field' => 'barcode',
+        ),
+        'upitt_islandora_audit_items_workflow_record' => array(
+          'left_field' => 'barcode',
+          'field' => 'barcode',
         ),
       ),
     ),
     'id' => array(
       'title' => t('ID'),
-      'help' => t('Identifier of an item in the queue.'),
+      'help' => t('Autoincrement ID of an item.'),
       'field' => array(
         'handler' => 'views_handler_field',
         // This is use by the table display plugin.
@@ -64,9 +51,9 @@ function ___upitt_islandora_inventory_audit_views_data() {
         'handler' => 'views_handler_argument_string',
       ),
     ),
-    'parent' => array(
-      'title' => t('Parent'),
-      'help' => t('Identifier of the parent of the current item.'),
+    'islandora_pid' => array(
+      'title' => t('PID'),
+      'help' => t('The Islandora PID value for an item.'),
       'field' => array(
         'handler' => 'views_handler_field',
         // This is use by the table display plugin.
@@ -82,22 +69,78 @@ function ___upitt_islandora_inventory_audit_views_data() {
         'handler' => 'views_handler_argument_string',
       ),
     ),
-    'sid' => array(
-      'title' => t('Set ID'),
-      'help' => t('ID of the set in which an item resides.'),
+    'parent_pids' => array(
+      'title' => t('Parent PIDs'),
+      'help' => t('Identifiers of the parents for the current item.'),
+      'field' => array(
+        'handler' => 'views_handler_field',
+        // This is use by the table display plugin.
+        'click sortable' => TRUE,
+      ),
+      'sort' => array(
+        'handler' => 'views_handler_sort',
+      ),
+      'filter' => array(
+        'handler' => 'views_handler_filter_string',
+      ),
+      'argument' => array(
+        'handler' => 'views_handler_argument_string',
+      ),
+    ),
+
+    'datastreams_latestsize' => array(
+      'title' => t('Datastreams\' total size (latest only)'),
+      'help' => t('Datastreams\' total size (latest only).'),
+      'field' => array(
+        'handler' => 'views_handler_field',
+        // This is use by the table display plugin.
+        'click sortable' => TRUE,
+      ),
+      'sort' => array(
+        'handler' => 'views_handler_sort',
+      ),
+      'filter' => array(
+        'handler' => 'views_handler_filter_numeric',
+      ),
+      'argument' => array(
+        'handler' => 'views_handler_argument_numeric',
+      ),
+    ),
+    'datastreams_totalsize' => array(
+      'title' => t('Datastreams\' total size (all versions)'),
+      'help' => t('Datastreams\' total size (all versions).'),
+      'field' => array(
+        'handler' => 'views_handler_field',
+        // This is use by the table display plugin.
+        'click sortable' => TRUE,
+      ),
+      'sort' => array(
+        'handler' => 'views_handler_sort',
+      ),
+      'filter' => array(
+        'handler' => 'views_handler_filter_numeric',
+      ),
+      'argument' => array(
+        'handler' => 'views_handler_argument_numeric',
+      ),
+    ),
+    'barcode' => array(
+      'title' => t('Barcode'),
+      'help' => t('Barcode value for an object.'),
       'field' => array(
         'handler' => 'views_handler_field_numeric',
         'click sortable' => TRUE,
       ),
       'filter' => array(
-        'handler' => 'views_handler_filter_numeric',
+        'handler' => 'views_handler_field',
       ),
       'sort' => array(
         'handler' => 'views_handler_sort',
       ),
       'argument' => array(
-        'handler' => 'views_handler_argument_numeric',
+        'handler' => 'views_handler_argument_string',
       ),
+/*
       'relationship' => array(
         'base' => 'islandora_batch_set',
         'base field' => 'id',
@@ -106,12 +149,13 @@ function ___upitt_islandora_inventory_audit_views_data() {
         'title' => t('Associated Set'),
         'help' => t('The set of objects with which the given object is associated.'),
       ),
+ */
     ),
     'actions' => array(
       'title' => t('Item Actions'),
-      'help' => t('A list of actions which may be performed on an item in the queue.'),
+      'help' => t('A list of actions which may be performed on an item.'),
       'field' => array(
-        'handler' => 'IslandoraBatchViewsFieldHandlerQueueActions',
+        'handler' => 'UpittIslandoraInventoryAuditViewsFieldHandlerQueueActions',
       ),
     ),
   );
@@ -182,9 +226,9 @@ function ___upitt_islandora_inventory_audit_views_data() {
     ),
     'actions' => array(
       'title' => t('Set Actions'),
-      'help' => t('A list of actions which may be performed on a set of items in the queue.'),
+      'help' => t('A list of actions which may be performed on a set of items.'),
       'field' => array(
-        'handler' => 'IslandoraBatchViewsFieldHandlerSetActions',
+        'handler' => 'UpittIslandoraInventoryAuditViewsFieldHandlerSetActions',
       ),
     ),
   );
@@ -201,13 +245,13 @@ function ___upitt_islandora_inventory_audit_views_data() {
     ),
     'id' => array(
       'title' => t('ID'),
-      'help' => t('Identifier of an item in the queue.'),
+      'help' => t('Identifier of an item.'),
     ),
     'state' => array(
       'title' => t('Item State'),
-      'help' => t('The state of an item in the queue.'),
+      'help' => t('The state of an item.'),
       'field' => array(
-        'handler' => 'IslandoraBatchStateFieldHandler',
+        'handler' => 'UpittIslandoraInventoryAuditStateFieldHandler',
       ),
       'sort' => array(
         'handler' => 'views_handler_sort',
@@ -230,11 +274,11 @@ function ___upitt_islandora_inventory_audit_views_data() {
     ),
     'id' => array(
       'title' => t('ID'),
-      'help' => t('Identifier of an item in the queue.'),
+      'help' => t('Identifier of an item.'),
     ),
     'message' => array(
       'title' => t('Item Message'),
-      'help' => t('The message for an item in the queue.'),
+      'help' => t('The message for an item.'),
       'field' => array(
         'handler' => 'views_handler_field',
       ),

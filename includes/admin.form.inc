@@ -45,7 +45,7 @@ function upitt_islandora_inventory_audit_admin_form() {
     ),
     'populate' => array(
       '#type' => 'submit',
-      '#value' => t('Populate audit table'),
+      '#value' => t('Populate ALL audit tables'),
     ),
     'islandora' => array(
       '#type' => 'fieldset',

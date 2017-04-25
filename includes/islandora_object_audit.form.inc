@@ -1,4 +1,4 @@
-<?php 
+  <?php 
 
 /**
  * @file
@@ -18,7 +18,7 @@ function upitt_islandora_inventory_audit_form(array $form, array &$form_state, A
   if (is_object($object)) {
     $is_paged = upitt_workflow_is_paged_object($object);
     @list($namespace, $id_no_namespace) = explode(":", $object->id);
-    $audit_record = upitt_islandora_inventory_get_record_by_pid($object->id);
+    $audit_record = upitt_islandora_inventory_audit_get_record_by_pid($object->id);
 
     // If the workflow_record value is set, get the status of that record from the database.
     // if (!empty($audit_record['workflow_record'])) {

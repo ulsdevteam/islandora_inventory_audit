@@ -62,3 +62,13 @@ function upitt_islandora_inventory_audit_preprocess_page(&$vars) {
     }
   }
 }
+
+/**
+ * Implements hook_views_api().
+ */
+function upitt_islandora_inventory_audit_views_api() {
+  return array(
+    'api' => 3,
+    'path' => drupal_get_path('module', 'upitt_islandora_inventory_audit') . '/views',
+  );
+}

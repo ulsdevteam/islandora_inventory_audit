@@ -8,12 +8,12 @@ define('UPITT_ISLANDORA_INVENTORY_SOLR_CHUNKSIZE', 50000);
  * Database functions for the Islandora Inventory Audit module.
  */
 
-function upitt_islandora_inventory_html_escape_string($html_escape) {
+function upitt_islandora_inventory_audit_html_escape_string($html_escape) {
   $html_escape =  htmlspecialchars($html_escape, ENT_QUOTES | ENT_HTML5, 'UTF-8');
   return $html_escape;
 }
 
-function upitt_islandora_inventory_get_record_by_pid($pid) {
+function upitt_islandora_inventory_audit_get_record_by_pid($pid) {
   // strip the namespace from the PID value and look for that barcode in all tables.
   $barcode = substr($pid, strpos($pid, ':') + 1);
 
@@ -23,7 +23,7 @@ function upitt_islandora_inventory_get_record_by_pid($pid) {
                     'LEFT JOIN {upitt_islandora_audit_items_workflow_record} aw ON (aw.barcode = ai.barcode) ' .
                     'LEFT JOIN {upitt_islandora_audit_items_bigfoot} ab ON (ab.barcode = ai.barcode) ' .
                     'LEFT JOIN {upitt_islandora_audit_items_equinox} ae ON (ae.barcode = ai.barcode) ' .
-                    'WHERE ai.barcode = \'' . upitt_islandora_inventory_html_escape_string($barcode) . '\'');
+                    'WHERE ai.barcode = \'' . upitt_islandora_inventory_audit_html_escape_string($barcode) . '\'');
 
   return $query->fetchAssoc();
 }
@@ -177,6 +177,8 @@ function upitt_islandora_inventory_audit_insert($table_suffix, $name_value_pairs
  * with "ingest completed" status.
  */
 function upitt_islandora_inventory_audit_populate_workflow_record() {
+  set_time_limit(0);
+
   module_load_include('inc', 'upitt_workflow', 'includes/utilities');
   module_load_include('module', 'upitt_workflow', 'upitt_workflow');
 
@@ -203,6 +205,8 @@ function upitt_islandora_inventory_audit_populate_workflow_record() {
  * Scan to pick up any folders that were not already added by workflow reference.
  */
 function upitt_islandora_inventory_audit_populate_bigfoot_path() {
+  set_time_limit(0);
+
   // scan the directory -- finding all folders that qualify as an object on bigfoot...
   // while a book is only one object on the bigfoot system, it must create an entry for
   // every page *.tif / *.tiff file as an object record.
@@ -212,15 +216,30 @@ function upitt_islandora_inventory_audit_populate_bigfoot_path() {
     return;
   }
 
+  $ignore_these_upcased_filenames = array('TARGET.TIF');
   $handle = fopen($files_list_path, "r");
   if ($handle) {
     $last_barcode = '';
     while (($file = fgets($handle)) !== FALSE) {
+      $file = trim($file);
       $path_info = pathinfo($file);
       $path = (isset($path_info['dirname']) ? $path_info['dirname'] : '/');
-      $fn_parts = explode(".", str_replace($path, "", $file));
-      if (/* strstr($file, '.marcxml.xml') || */ strstr($file, '.mods.xml') || strstr($file, '.dc.xml')) {
-        $barcode = str_replace(array($path, /* '.marcxml.xml',*/ '.mods.xml', '.dc.xml'),
+      $fname_only = $path_info['filename'];
+
+      if (strstr($file, 'ulsmanuscripts/31735037971722') <> '') {
+        $path_parts = explode("/", $path);
+        $barcode = (count($path_parts) > 0) ? $path_parts[count($path_parts) - 1] : '';
+        $pseudo_barcode = $barcode . '-' . $fname_only;
+
+        echo "extension : [" . $path_info['extension'] . "]<br>" . 
+             "file = " . $file . "<br>" .
+             $fname_only . "<br>" .
+             $barcode . "<br>" .
+             $pseudo_barcode . "<hr>";
+      }
+
+      if (strstr($file, '.mods.xml')/* || strstr($file, '.dc.xml') */) {
+        $barcode = str_replace(array($path . '/', '.mods.xml'/*, '.dc.xml'*/),
                 "", $file);
         $upcase_barcode = strtoupper($barcode);
         if ($last_barcode <> $upcase_barcode) {
@@ -228,27 +247,39 @@ function upitt_islandora_inventory_audit_populate_bigfoot_path() {
           $last_barcode = $upcase_barcode;
         }
       }
-      elseif (isset($fn_parts[0]) && isset($fn_parts[1]) && ($fn_parts[1] == 'tif' || $fn_parts[1] == 'tiff') && is_numeric($fn_parts[0])) {
-        // For this section, the barcode can come from the last part of the $fn_parts array
+//       elseif (isset($fn_parts[0]) && isset($fn_parts[1]) && ($fn_parts[1] == 'tif' || $fn_parts[1] == 'tiff') && is_numeric($fn_parts[0])) {
+      elseif (($path_info['extension'] == 'tif') || ($path_info['extension'] == 'tiff')) {
+        // For this section, the barcode can come from the filename
         $path_parts = explode("/", $path);
         $barcode = (count($path_parts) > 0) ? $path_parts[count($path_parts) - 1] : '';
-        $pseudo_barcode = $barcode . '-' . $fn_parts[0];
+        $pseudo_barcode = $barcode . '-' . $fname_only;
+
+        // shift off the last element (the extension) -- and reimplode to get just the filename portion
         // Look at the filename -- if it looks like it is a page object (####.tif), then add that reference as
         // a barcode value like 31234567809-0041.
-        upitt_islandora_inventory_audit_insert('bigfoot_path', array('bigfoot_path' => $path, 'barcode' => $pseudo_barcode));
+        $upcased_fname = strtoupper($fname_only);
+        if (array_search($upcased_fname, $ignore_these_upcased_filenames) === FALSE) {
+          if ((strstr($file, 'ulsmanuscripts/31735037971722') <> '') && ($path_info['extension'] == 'tif')) {
+            echo "<b>ADDED</b><br>";
+          }
+          upitt_islandora_inventory_audit_insert('bigfoot', array('bigfoot_path' => $path, 'barcode' => $pseudo_barcode));
+        }
       }
     }
     fclose($handle);
   } else {
     drupal_set_message('There was a problem opening the file "' . $files_list_path . '".  No inventory could be determined from the bigfoot location.', 'error');
   }
-  drupal_set_message('exiting upitt_islandora_inventory_audit_populate_bigfoot_path');
+  // drupal_set_message('exiting upitt_islandora_inventory_audit_populate_bigfoot_path');
+  die('done');
 }
 
 /**
  * Scan to update the equinox path values.
  */
 function upitt_islandora_inventory_audit_populate_equinox_path() {
+  set_time_limit(0);
+
   // scan the directory -- finding all folders that qualify as an object on equinox...
   // while a book is only one object on the equinox system, it must create an entry for
   // every page *.tif / *.tiff file as an object record.
@@ -338,6 +369,8 @@ function upitt_islandora_inventory_scan_subfolder($subfolder, $inventory_table) 
  * Scan the islandora system - run a Solr query to get all PID values - and insert them
  */
 function upitt_islandora_inventory_audit_populate_islandora_pid() {
+  set_time_limit(0);
+
   module_load_include('inc', 'islandora_solr', 'includes/utilities');
   $query_processor = new IslandoraSolrQueryProcessor();
 
@@ -379,6 +412,7 @@ function upitt_islandora_inventory_audit_populate_islandora_pid() {
  * This will get UPITT_ISLANDORA_INVENTORY_SOLR_CHUNKSIZE islandora PID records at a time.
  */
 function upitt_islandora_inventory_audit_populate_achunkof_islandora_pid($offset) {
+  module_load_include('inc', 'upitt_workflow', 'includes/utilities');
   module_load_include('inc', 'islandora_solr', 'includes/utilities');
   $query_processor = new IslandoraSolrQueryProcessor();
 
@@ -402,8 +436,13 @@ function upitt_islandora_inventory_audit_populate_achunkof_islandora_pid($offset
     if ($tmp['response']['numFound'] > 0) {
       foreach ($tmp['response']['docs'] as $k=>$rec) {
         $pid = $rec['PID'];
+        $datastream_sizes = upitt_workflow_get_datastreams_sizes($pid);
+        $datastream_size_sums = upitt_workflow_sum_datastream_sizes($datastream_sizes);
         $barcode = substr($pid, strpos($pid, ':') + 1);
-        upitt_islandora_inventory_audit_insert('islandora', array('islandora_pid' => $pid, 'barcode' => $barcode));
+        upitt_islandora_inventory_audit_insert('islandora', array('islandora_pid' => $pid, 
+            'barcode' => $barcode,
+            'datastreams_latestsize' => $datastream_size_sums['datastreams_latestsize'],
+            'datastreams_totalsize' => $datastream_size_sums['datastreams_totalsize']));
       }
     }
   }

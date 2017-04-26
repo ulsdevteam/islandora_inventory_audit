@@ -40,7 +40,7 @@ function upitt_islandora_inventory_audit_reports_form() {
     'workflow' => array(
       '#type' => 'fieldset',
       '#title' => number_format($inventory_record_counts['upitt_islandora_audit_items_workflow_record']) . ' legacy django workflow records',
-      '#description' => l('What is ONLY in workflow?','/admin/islandora/inventory_audit/reports/workflow_records/true'),
+      '#description' => l('What is ONLY in workflow?','/admin/islandora/inventory_audit/reports/workflow_record/true'),
     ),
     'bigfoot' => array(
       '#type' => 'fieldset',
@@ -118,8 +118,24 @@ function upitt_islandora_inventory_audit_get_report_table($table, $boolean, $pag
   $rows = array();
 
   $fields = upitt_islandora_inventory_audit_get_fields($real_tablename);
-  $sql = 'SELECT ' . implode(',', $fields['fields']) . ' ' .
-         'FROM ' . $real_tablename . ' ';
+  $sql = 'SELECT ta.' . implode(',ta.', $fields['fields']) . ' ' .
+         'FROM ' . $real_tablename . ' ta ';
+  if ($boolean) {
+    switch ($table) {
+      case 'islandora':
+        $sql .= 'LEFT JOIN upitt_islandora_audit_items_bigfoot ab ON (ta.barcode = ab.barcode) ' .
+                'LEFT JOIN upitt_islandora_audit_items_equinox ae ON (ta.barcode = ae.barcode) ' .
+                'LEFT JOIN upitt_islandora_audit_items_workflow_record aw ON (ta.barcode = aw.barcode) ' .
+                'WHERE ab.barcode IS NULL AND ae.barcode IS NULL AND aw.barcode IS NULL ';
+        break;
+
+      default:
+        $sql .= 'LEFT JOIN upitt_islandora_audit_items_islandora ai ON (ta.barcode = ai.barcode) ' .
+                'WHERE ai.barcode IS NULL ';
+        break;
+    }
+  }
+  dpm($sql);
   $result = db_query($sql);
   $result->execute();
   $count = $result->rowCount();
@@ -131,7 +147,7 @@ function upitt_islandora_inventory_audit_get_report_table($table, $boolean, $pag
   $result->execute();
   
   pager_default_initialize($count, UPITT_ISLANDORA_INVENTORY_AUDIT_REPORT_PAGESIZE, $element = 0);
-  $pager = theme('pager',array("quantity"=>$count));
+  $pager = theme('pager',array("quantity"=>10));
 
   while($record = $result->fetchAssoc()) {
     // loop through the elements of the record - and if the field matches one of
@@ -175,6 +191,23 @@ function upitt_islandora_inventory_audit_get_fields($real_tablename) {
       $return['fields'][] = 'datastreams_latestsize';
       $return['fields'][] = 'datastreams_totalsize';
       $return['integer_fields'] = array('datastreams_latestsize', 'datastreams_totalsize');
+      break;
+
+    case 'upitt_islandora_audit_items_bigfoot':
+      $return['fields'][] = 'barcode';
+      $return['fields'][] = 'bigfoot_path';
+      $return['integer_fields'] = array();
+      break;
+
+    case 'upitt_islandora_audit_items_workflow_record':
+      $return['fields'][] = 'barcode';
+      $return['integer_fields'] = array();
+      break;
+
+    case 'upitt_islandora_audit_items_equinox':
+      $return['fields'][] = 'barcode';
+      $return['fields'][] = 'equinox_path';
+      $return['integer_fields'] = array();
       break;
 
     default:

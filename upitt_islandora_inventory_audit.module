@@ -24,6 +24,24 @@ function upitt_islandora_inventory_audit_menu() {
       'access arguments' => array(UPITT_ISLANDORA_INVENTORY_AUDIT),
       'file' => 'includes/admin.form.inc',
     ),
+    // reports selection page
+    'admin/islandora/inventory_audit/reports' => array(
+      'title' => 'Inventory Audit Reports',
+      'page callback' => 'drupal_get_form',
+      'page arguments' => array('upitt_islandora_inventory_audit_reports_form'),
+      'type' => MENU_LOCAL_TASK,
+      'file' => 'includes/reports.form.inc',
+      'access arguments' => array(UPITT_ISLANDORA_INVENTORY_AUDIT),
+    ),
+    // report handler
+    'admin/islandora/inventory_audit/reports/%/%' => array(
+      'title' => 'Inventory Audit Reports',
+      'page callback' => 'upitt_islandora_inventory_audit_reports_report',
+      'page arguments' => array(4,5),
+      'type' => MENU_LOCAL_TASK,
+      'file' => 'includes/reports.form.inc',
+      'access arguments' => array(UPITT_ISLANDORA_INVENTORY_AUDIT),
+    ),
     'islandora/object/%islandora_object/manage/audit_upitt_workflow/inventory_audit' => array(
       'title' => 'Inventory Audit',
       'page callback' => 'drupal_get_form',
@@ -56,7 +74,8 @@ function upitt_islandora_inventory_audit_preprocess_page(&$vars) {
   $item = menu_get_item();
   $path = drupal_get_path('module', 'upitt_islandora_inventory_audit');
   if (is_array($item)) {
-    if (($item['path'] == 'islandora/object/%/manage/audit_upitt_workflow/inventory_audit')) {
+    if (($item['path'] == 'islandora/object/%/manage/audit_upitt_workflow/inventory_audit') ||
+        (strstr($item['path'], 'admin/islandora/inventory_audit/reports/')) ) {
       drupal_add_css($path . '/css/audit_details.css');
       $vars['page']['sidebar'] = array();
     }
@@ -64,11 +83,13 @@ function upitt_islandora_inventory_audit_preprocess_page(&$vars) {
 }
 
 /**
- * Implements hook_views_api().
+ * Implement hook theme
  */
-function upitt_islandora_inventory_audit_views_api() {
+function upitt_islandora_inventory_audit_theme() {
   return array(
-    'api' => 3,
-    'path' => drupal_get_path('module', 'upitt_islandora_inventory_audit') . '/views',
+    'upitt_islandora_inventory_audit_report' => array(
+      'variables' => array('table' => NULL, 'count_rows' => '', 'links' => '', 'pager' => '', 'table_markup' => ''),
+      'template' => 'theme/upitt-islandora-inventory-audit-report',
+    ),
   );
 }

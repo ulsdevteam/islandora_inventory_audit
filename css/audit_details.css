@@ -15,3 +15,8 @@ and open the template in the editor.
     min-width: 160px;
     display: inline-block;
 }
+
+.numeric {
+	text-align: right;
+}
+

@@ -19,13 +19,13 @@ function upitt_islandora_inventory_audit_admin_form() {
   module_load_include('inc', 'upitt_islandora_inventory_audit', 'includes/db');
   $inventory_record_counts = upitt_islandora_inventory_all_record_counts();
   $form = array(
+    'reports' => array(
+      '#type' => 'item',
+      '#markup' => '<h3>' . l('View Islandora Audit Reports', 'admin/islandora/inventory_audit/reports') . '</h3>',
+    ),
     'frame' => array(
       '#type' => 'fieldset',
       '#title' => 'About Islandora Inventory Audit',
-      'about' => array(
-        '#type' => 'item',
-        '#markup' => 'Inventory Audit',
-      ),
       'bigfoot_mapped_path' => array(
         '#type' => 'textfield',
         '#title' => 'Bigfoot files list file on this server',
@@ -45,11 +45,11 @@ function upitt_islandora_inventory_audit_admin_form() {
     ),
     'populate' => array(
       '#type' => 'submit',
-      '#value' => t('Populate ALL audit tables'),
+      '#value' => t('Populate ALL inventory tables'),
     ),
     'islandora' => array(
       '#type' => 'fieldset',
-      '#description' => number_format($inventory_record_counts['upitt_islandora_audit_items_islandora']) . ' records',
+      '#title' => number_format($inventory_record_counts['upitt_islandora_audit_items_islandora']) . ' Islandora objects',
       'sync_islandora' => array(
         '#type' => 'submit',
         '#value' => t('Inventory Islandora'),
@@ -57,7 +57,7 @@ function upitt_islandora_inventory_audit_admin_form() {
     ),
     'workflow' => array(
       '#type' => 'fieldset',
-      '#description' => number_format($inventory_record_counts['upitt_islandora_audit_items_workflow_record']) . ' records',
+      '#title' => number_format($inventory_record_counts['upitt_islandora_audit_items_workflow_record']) . ' legacy django workflow records',
       'sync_workflow' => array(
         '#type' => 'submit',
         '#value' => t('Inventory Workflow'),
@@ -65,7 +65,7 @@ function upitt_islandora_inventory_audit_admin_form() {
     ),
     'bigfoot' => array(
       '#type' => 'fieldset',
-      '#description' => number_format($inventory_record_counts['upitt_islandora_audit_items_bigfoot']) . ' records',
+      '#title' => number_format($inventory_record_counts['upitt_islandora_audit_items_bigfoot']) . ' bigfoot object files',
       'sync_bigfoot' => array(
         '#type' => 'submit',
         '#value' => t('Inventory bigfoot'),
@@ -73,12 +73,13 @@ function upitt_islandora_inventory_audit_admin_form() {
     ),
     'equinox' => array(
       '#type' => 'fieldset',
-      '#description' => number_format($inventory_record_counts['upitt_islandora_audit_items_equinox']) . ' records',
+      '#title' => number_format($inventory_record_counts['upitt_islandora_audit_items_equinox']) . ' equinox object files',
       'sync_equinox' => array(
         '#type' => 'submit',
         '#value' => t('Inventory equinox'),  
       ),
     ),
+
   );
   return $form;
 }

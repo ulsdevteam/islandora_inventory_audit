@@ -135,7 +135,7 @@ function upitt_islandora_inventory_audit_get_report_table($table, $boolean, $pag
         break;
     }
   }
-  dpm($sql);
+
   $result = db_query($sql);
   $result->execute();
   $count = $result->rowCount();

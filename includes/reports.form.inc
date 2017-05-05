@@ -33,24 +33,31 @@ function upitt_islandora_inventory_audit_reports_form() {
     ),
     'islandora' => array(
       '#type' => 'fieldset',
-      '#title' => number_format($inventory_record_counts['upitt_islandora_audit_items_islandora']) . ' Islandora objects',
-      '#description' => l('What is not in Islandora?','/admin/islandora/inventory_audit/reports/islandora/false') . "<br>" .
-        l('What is ONLY in Islandora?','/admin/islandora/inventory_audit/reports/islandora/true'),
+      '#title' => 'Islandora objects',
+      '#description' => l('Islandora inventory','/admin/islandora/inventory_audit/reports/islandora/all') .
+        " (" . number_format($inventory_record_counts['upitt_islandora_audit_items_islandora']) . " digital objects)<br>" .
+        l('Islandora inventory that is NOT in any other inventories','/admin/islandora/inventory_audit/reports/islandora/exclusive'),
     ),
     'workflow' => array(
       '#type' => 'fieldset',
-      '#title' => number_format($inventory_record_counts['upitt_islandora_audit_items_workflow_record']) . ' legacy django workflow records',
-      '#description' => l('What is ONLY in workflow?','/admin/islandora/inventory_audit/reports/workflow_record/true'),
+      '#title' => 'legacy django workflow records',
+      '#description' => l('Workflow inventory','/admin/islandora/inventory_audit/reports/workflow_record/all') . 
+        " (" . number_format($inventory_record_counts['upitt_islandora_audit_items_workflow_record']) . " records)<br>" .
+        l('Workflow inventory that is NOT in Islandora','/admin/islandora/inventory_audit/reports/workflow_record/exclusive'),
     ),
     'bigfoot' => array(
       '#type' => 'fieldset',
-      '#title' => number_format($inventory_record_counts['upitt_islandora_audit_items_bigfoot']) . ' bigfoot object files',
-      '#description' => l('What is ONLY on bigfoot?','/admin/islandora/inventory_audit/reports/bigfoot/true'),
+      '#title' => 'bigfoot object files',
+      '#description' => l('Bigfoot inventory','/admin/islandora/inventory_audit/reports/bigfoot/all') . 
+        " (" . number_format($inventory_record_counts['upitt_islandora_audit_items_bigfoot']) . " files)<br>" .
+        l('Bigfoot inventory that is NOT in Islandora','/admin/islandora/inventory_audit/reports/bigfoot/exclusive'),
     ),
-    'equinox' => array(
+    'photodb' => array(
       '#type' => 'fieldset',
-      '#title' => number_format($inventory_record_counts['upitt_islandora_audit_items_equinox']) . ' equinox object files',
-      '#description' => l('What is ONLY on equinox?','/admin/islandora/inventory_audit/reports/equinox/true'),
+      '#title' => 'photodb objects',
+      '#description' => l('PhotoDB inventory','/admin/islandora/inventory_audit/reports/photodb/all') . 
+        " (" . number_format($inventory_record_counts['upitt_islandora_audit_items_photodb']) . " records)<br>" .
+        l('PhotoDB inventory that is NOT in Islandora','/admin/islandora/inventory_audit/reports/photodb/exclusive'),
     ),
   );
   return $form;
@@ -60,17 +67,17 @@ function upitt_islandora_inventory_audit_reports_form() {
  * Will create the output of a given report.
  *
  * @param string $table
- * @param string $boolean_string
+ * @param string $exclusive_string
  * @return HTML markup
  */
-function upitt_islandora_inventory_audit_reports_report($table, $boolean_string) {
-  $boolean = ($boolean_string == 'true') ? TRUE : FALSE;
+function upitt_islandora_inventory_audit_reports_report($table, $exclusive_string) {
+  $exclusive = ($exclusive_string == 'exclusive') ? TRUE : FALSE;
 
   // Check for ?page= value -- to support pagination.
   $page = (isset($_GET['page'])) ? $_GET['page'] : 0;
 
   // Get records -- based on the offset - considering pagination.
-  $report = upitt_islandora_inventory_audit_get_report_table($table, $boolean, $page);
+  $report = upitt_islandora_inventory_audit_get_report_table($table, $exclusive, $page);
 
   // Set full record count
   $count_rows = $report['count'];
@@ -88,7 +95,11 @@ function upitt_islandora_inventory_audit_reports_report($table, $boolean_string)
       $human_readable_table = ucwords($table);
     break;
   }
-  $human_readable_table = (($boolean) ? '(what is ONLY in) ' : '(objects that are NOT in) ') . $human_readable_table;
+
+  $remaining_tables = ($table == 'islandora') ? 'any other inventories' : 'Islandora';
+  $human_readable_table = (($exclusive) ? 'What is in ' . $human_readable_table . ' that is NOT in ' . $remaining_tables:
+      $human_readable_table . ' inventory'
+    );
   
   $links = array(); //l('test','/admin'),l('testlink2','/islandora'), );
 
@@ -101,7 +112,7 @@ function upitt_islandora_inventory_audit_reports_report($table, $boolean_string)
  * This will perform the database query for the given table and other parameters.
  *
  * @param string $table
- * @param boolean $boolean
+ * @param boolean $exclusive
  * @param integer $page
  * @return array
  *   'count' integer represents the total number of records for the given report.
@@ -110,7 +121,7 @@ function upitt_islandora_inventory_audit_reports_report($table, $boolean_string)
  *   'rows' array of values that correspond to the header fields - also used in
  *     creating the table markup in the calling procedure.
  */
-function upitt_islandora_inventory_audit_get_report_table($table, $boolean, $page) {
+function upitt_islandora_inventory_audit_get_report_table($table, $exclusive, $page) {
   module_load_include('inc', 'islandora', 'includes/utilities');
 
   $real_tablename = 'upitt_islandora_audit_items_' . $table;
@@ -120,12 +131,12 @@ function upitt_islandora_inventory_audit_get_report_table($table, $boolean, $pag
   $fields = upitt_islandora_inventory_audit_get_fields($real_tablename);
   $sql = 'SELECT ta.' . implode(',ta.', $fields['fields']) . ' ' .
          'FROM ' . $real_tablename . ' ta ';
-  if ($boolean) {
+  if ($exclusive) {
     switch ($table) {
       case 'islandora':
         $sql .= 'LEFT JOIN upitt_islandora_audit_items_bigfoot ab ON (ta.barcode = ab.barcode) ' .
-                'LEFT JOIN upitt_islandora_audit_items_equinox ae ON (ta.barcode = ae.barcode) ' .
                 'LEFT JOIN upitt_islandora_audit_items_workflow_record aw ON (ta.barcode = aw.barcode) ' .
+                'LEFT JOIN upitt_islandora_audit_items_photodb ap ON (ta.barcode = ap.barcode) ' .
                 'WHERE ab.barcode IS NULL AND ae.barcode IS NULL AND aw.barcode IS NULL ';
         break;
 
@@ -135,7 +146,6 @@ function upitt_islandora_inventory_audit_get_report_table($table, $boolean, $pag
         break;
     }
   }
-
   $result = db_query($sql);
   $result->execute();
   $count = $result->rowCount();
@@ -187,7 +197,9 @@ function upitt_islandora_inventory_audit_get_fields($real_tablename) {
     case 'upitt_islandora_audit_items_islandora':
       $return['fields'][] = 'islandora_pid';
       $return['fields'][] = 'barcode';
-      $return['fields'][] = 'parent_pids';
+      /* $return['fields'][] = 'parent_pids'; */
+      $return['fields'][] = 'fedora_model';
+      $return['fields'][] = 'depositor';
       $return['fields'][] = 'datastreams_latestsize';
       $return['fields'][] = 'datastreams_totalsize';
       $return['integer_fields'] = array('datastreams_latestsize', 'datastreams_totalsize');
@@ -204,9 +216,8 @@ function upitt_islandora_inventory_audit_get_fields($real_tablename) {
       $return['integer_fields'] = array();
       break;
 
-    case 'upitt_islandora_audit_items_equinox':
+    case 'upitt_islandora_audit_items_photodb':
       $return['fields'][] = 'barcode';
-      $return['fields'][] = 'equinox_path';
       $return['integer_fields'] = array();
       break;
 

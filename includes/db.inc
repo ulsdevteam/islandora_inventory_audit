@@ -18,11 +18,11 @@ function upitt_islandora_inventory_audit_get_record_by_pid($pid) {
   $barcode = substr($pid, strpos($pid, ':') + 1);
 
   // don't even try to use the drupal database objects to get this query right ...
-  $query = db_query('SELECT ai.islandora_pid, aw.barcode `workflow_record` ' .
+  $query = db_query('SELECT ai.islandora_pid, aw.barcode `workflow_record`, ab.bigfoot_path, ap.barcode `photodb_identifier` ' .
                     'FROM {upitt_islandora_audit_items_islandora} ai ' .
                     'LEFT JOIN {upitt_islandora_audit_items_workflow_record} aw ON (aw.barcode = ai.barcode) ' .
                     'LEFT JOIN {upitt_islandora_audit_items_bigfoot} ab ON (ab.barcode = ai.barcode) ' .
-                    'LEFT JOIN {upitt_islandora_audit_items_equinox} ae ON (ae.barcode = ai.barcode) ' .
+                    'LEFT JOIN {upitt_islandora_audit_items_photodb} ap ON (ap.barcode = ai.barcode) ' .
                     'WHERE ai.barcode = \'' . upitt_islandora_inventory_audit_html_escape_string($barcode) . '\'');
 
   return $query->fetchAssoc();
@@ -37,6 +37,8 @@ function upitt_islandora_inventory_audit_sync_islandora() {
   $times_info = array();
   $very_start_time = upitt_islandora_inventory_audit_microtime_float();
   $time_start = $very_start_time;
+
+  $result = db_truncate('{upitt_islandora_audit_items_parents_islandora}')->execute();
 
   $result = db_truncate('{upitt_islandora_audit_items_islandora}')->execute();
 
@@ -116,33 +118,25 @@ function upitt_islandora_inventory_audit_sync_bigfoot() {
 }
 
 /**
- * This will sync the inventory of the files on equinox.
+ * To populate the inventory records for the photoDB table.
+ * @return boolean
  */
-function upitt_islandora_inventory_audit_sync_equinox() {
+function upitt_islandora_inventory_audit_sync_photodb() {
   module_load_include('inc', 'upitt_islandora_inventory_audit', 'includes/utilities');
 
   $times_info = array();
   $very_start_time = upitt_islandora_inventory_audit_microtime_float();
-  $time_start = $very_start_time;
 
-  $result = db_truncate('upitt_islandora_audit_items_equinox')->execute();
+  // populate the table here...
 
   $time_end = upitt_islandora_inventory_audit_microtime_float();
-  $time = $time_end - $time_start;
-  $times_info[] = '<b>' . round($time, 2) . ' seconds</b> truncate {upitt_islandora_audit_items_equinox} table done';
-
-  // scan to update the equinox path values.
-  $time_start = upitt_islandora_inventory_audit_microtime_float();
-  upitt_islandora_inventory_audit_populate_equinox_path();
-  $time_end = upitt_islandora_inventory_audit_microtime_float();
-  $time = $time_end - $time_start;
-  $times_info[] = '<b>' . round($time, 2) . ' seconds</b> upitt_islandora_inventory_audit_populate_equinox_path done';
-
   $time = $time_end - $very_start_time;
   $times_info[] = '<b>' . round($time, 2) . '</b> Total time';
 
   drupal_set_message(implode('<br>', $times_info));
+  return TRUE;
 }
+
 
 /**
  * This will perform all four areas "sync" functions.
@@ -151,7 +145,7 @@ function upitt_islandora_inventory_audit_populate() {
   upitt_islandora_inventory_audit_sync_islandora();
   upitt_islandora_inventory_audit_sync_workflow();
   upitt_islandora_inventory_audit_sync_bigfoot();
-  upitt_islandora_inventory_audit_sync_equinox();
+  upitt_islandora_inventory_audit_sync_photodb();
 }
 
 /**
@@ -164,6 +158,19 @@ function upitt_islandora_inventory_audit_insert($table_suffix, $name_value_pairs
     ->fields($name_value_pairs)
     ->execute();
   return $id_inserted;
+}
+
+function upitt_islandora_inventory_audit_insert_islandora_parents($pid, $parents) {
+  foreach ($parents as $parent) {
+    if (is_object(islandora_object_load($parent))) {
+      db_insert('upitt_islandora_audit_items_parents_islandora')
+        ->fields(array(
+          'islandora_pid' => $pid,
+          'parent_islandora_pid' => $parent,)
+        )
+        ->execute();
+    }
+  }
 }
 
 /**
@@ -272,53 +279,6 @@ function upitt_islandora_inventory_audit_populate_bigfoot_path() {
   }
   // drupal_set_message('exiting upitt_islandora_inventory_audit_populate_bigfoot_path');
   die('done');
-}
-
-/**
- * Scan to update the equinox path values.
- */
-function upitt_islandora_inventory_audit_populate_equinox_path() {
-  set_time_limit(0);
-
-  // scan the directory -- finding all folders that qualify as an object on equinox...
-  // while a book is only one object on the equinox system, it must create an entry for
-  // every page *.tif / *.tiff file as an object record.
-  $files_list_path = variable_get('upitt_islandora_inventory_audit_equinox_files_mapped_path');
-  if (!$files_list_path) {
-    drupal_set_message('The "Equinox files list file" is not configured.  Configure it: ' . l('/admin/islandora/inventory_audit', '/admin/islandora/inventory_audit'), 'error');
-    return;
-  }
-
-  $handle = fopen($files_list_path, "r");
-  if ($handle) {
-    $last_barcode = '';
-    while (($file = fgets($handle)) !== FALSE) {
-      $path_parts = pathinfo($file);
-      $path = (isset($path_parts['dirname']) ? $path_parts['dirname'] : '/');
-      $parts = explode(".", $file);
-      if (/* strstr($file, '.marcxml.xml') || */ strstr($file, '.mods.xml') || strstr($file, '.dc.xml')) {
-        $barcode = str_replace(array($path, /* '.marcxml.xml',*/ '.mods.xml', '.dc.xml'),
-                "", $file);
-        if ($last_barcode <> $barcode) {
-          upitt_islandora_inventory_audit_insert('equinox', array('equinox_path' => $path, 'barcode' => $barcode));
-          $last_barcode = $barcode;
-        }
-      }
-      elseif (isset($parts[0]) && isset($parts[1]) && ($parts[1] == 'tif' || $parts[1] == 'tiff') && is_numeric($parts[0])) {
-        // For this section, the barcode can come from the last part of the $parts array
-        $barcode = (count($parts) > 0) ? $parts[count($parts) - 1] : '';
-        $pseudo_barcode = $barcode . '-' . $parts[0];
-        // Look at the filename -- if it looks like it is a page object (####.tif), then add that reference as
-        // a barcode value like 31234567809-0041.
-        upitt_islandora_inventory_audit_insert('equinox_path', array('equinox_path' => $path, 'barcode' => $pseudo_barcode));
-      }
-    }
-    fclose($handle);
-  } else {
-    drupal_set_message('There was a problem opening the file "' . $files_list_path . '".  No inventory could be determined from the equinox location.', 'error');
-  }
-
-  drupal_set_message('exiting upitt_islandora_inventory_audit_populate_equinox_path');
 }
 
 /**
@@ -436,7 +396,7 @@ function upitt_islandora_inventory_audit_populate_achunkof_islandora_pid($offset
     if ($tmp['response']['numFound'] > 0) {
       foreach ($tmp['response']['docs'] as $k=>$rec) {
         $pid = $rec['PID'];
-        $datastream_sizes = upitt_workflow_get_datastreams_sizes($pid);
+        $datastream_sizes = upitt_workflow_get_depositor_model_and_datastreams_sizes($pid);
         $datastream_size_sums = upitt_workflow_sum_datastream_sizes($datastream_sizes);
         $barcode = substr($pid, strpos($pid, ':') + 1);
         $obj = islandora_object_load($pid);
@@ -445,10 +405,16 @@ function upitt_islandora_inventory_audit_populate_achunkof_islandora_pid($offset
             'barcode' => $barcode,
             'datastreams_latestsize' => $datastream_size_sums['datastreams_latestsize'],
             'datastreams_totalsize' => $datastream_size_sums['datastreams_totalsize'],
-            'parent_pids' => implode(",", $parents)));
+            /* 'parent_pids' => implode(",", $parents) */
+            'fedora_model' => str_replace('info:fedora/islandora:', '', $datastream_sizes['RELS_EXT_hasModel_uri_s']),
+            'depositor' => isset($datastream_sizes['mods_name_depositor_namePart_s']) ? $datastream_sizes['mods_name_depositor_namePart_s'] : '',
+            ));
+        // add records for the object to parent relationhips
+        upitt_islandora_inventory_audit_insert_islandora_parents($pid, $parents);
       }
     }
   }
+    
   catch (Exception $e) {
     error_log('EXCEPTION in _save_solr_search_session : called from ' . $_SERVER['SERVER_NAME'] .
 ' - ' . $_SERVER['REQUEST_URI'] . '
@@ -469,12 +435,13 @@ function upitt_islandora_inventory_all_record_counts() {
             ->fields('ab')
             ->execute();
   $num_of_upitt_islandora_audit_items_bigfoot = $results->rowCount();
-  $results = db_select('upitt_islandora_audit_items_equinox', 'ae')
-            ->fields('ae')
+  $results = db_select('upitt_islandora_audit_items_photodb', 'ab')
+            ->fields('ab')
             ->execute();
-  $num_of_upitt_islandora_audit_items_equinox = $results->rowCount();
+  $num_of_upitt_islandora_audit_items_photodb = $results->rowCount();
   return array('upitt_islandora_audit_items_islandora' => $num_of_upitt_islandora_audit_items_islandora,
       'upitt_islandora_audit_items_workflow_record' => $num_of_upitt_islandora_audit_items_workflow_record,
       'upitt_islandora_audit_items_bigfoot' => $num_of_upitt_islandora_audit_items_bigfoot,
-      'upitt_islandora_audit_items_equinox' => $num_of_upitt_islandora_audit_items_equinox);
+      'upitt_islandora_audit_items_photodb' => $num_of_upitt_islandora_audit_items_photodb,
+      );
 }

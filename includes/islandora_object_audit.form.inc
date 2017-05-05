@@ -26,7 +26,7 @@ function upitt_islandora_inventory_audit_form(array $form, array &$form_state, A
     // }
 
     // check against the "all_ingests.txt" file
-    $found = upitt_workflow_check_for_object_in_all_ingests($id_no_namespace);
+    $found_in_all_ingests_file = upitt_workflow_check_for_object_in_all_ingests($id_no_namespace);
     // For a paged object, just look for the pid value ($id_no_namespace) in the all_intests file, but for a
     // page or manuscript page the parent object should be on the all_ingests list.
     if (!$is_paged) {
@@ -49,14 +49,15 @@ function upitt_islandora_inventory_audit_form(array $form, array &$form_state, A
     '</p>' .
     '<p><span class="format_label' . ((empty($audit_record['bigfoot_path'])) ? ' error' : '') .
           '">on bigfoot?</span>' . ((empty($audit_record['bigfoot_path'])) ? 'No' : 'Yes | ' . $audit_record['bigfoot_path']) .
-    '<p><span class="format_label' . ((empty($audit_record['equinox_path'])) ? ' error' : '') .
-          '">on equinox?</span>' . ((empty($audit_record['equinox_path'])) ? 'No' : 'Yes | ' . $audit_record['equinox_path']) .
+    '<p><span class="format_label' . ((empty($audit_record['photodb_identifier'])) ? ' error' : '') .
+          '">in PhotoDB?</span>' . ((empty($audit_record['photodb_identifier'])) ? 'No' : 'Yes | ' . $audit_record['photodb_identifier']) .
+    '</p>' .
+    '<p><span class="format_label' . (!($found_in_all_ingests_file) ? ' error' : '') .
+          '">in the "all_ingests.txt" file?</span>' . (!($found_in_all_ingests_file) ? 'No' : 'Yes').
     '</p>' .
 
     '<h4>Object "' . $id_no_namespace . '" ingested upstairs?</h4>' .
-    '<p>' . l($id_no_namespace, '/workflow/object/' . $object->id) . ' is ' . ($found ? '' : 'not') . ' in the "all_ingests.txt" file. ' .
-    (($is_paged) ? '' : 'This page object (' . $object->id . ') ' . (($workflow_page_record_exists) ? 'has' : 'DOES NOT HAVE') . ' a matching record in the workflow database') .
-    '</p>';
+    '<p>' . (($is_paged) ? '' : 'This page object (' . $object->id . ') ' . (($workflow_page_record_exists) ? 'has' : 'DOES NOT HAVE') . ' a matching record in the workflow database') . '</p>';
 
   $form = array(  
     'object_audit' => array(

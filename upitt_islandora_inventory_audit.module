@@ -19,6 +19,7 @@ function upitt_islandora_inventory_audit_menu() {
     'admin/islandora/inventory_audit' => array(
       'title' => 'Islandora Inventory Audit',
       'description' => 'Settings for the Islandora Inventory Audit module.',
+      'type' => MENU_CALLBACK,
       'page callback' => 'drupal_get_form',
       'page arguments' => array('upitt_islandora_inventory_audit_admin_form'),
       'access arguments' => array(UPITT_ISLANDORA_INVENTORY_AUDIT),
@@ -35,10 +36,9 @@ function upitt_islandora_inventory_audit_menu() {
     ),
     // report handler
     'admin/islandora/inventory_audit/reports/%/%' => array(
-      'title' => 'Inventory Audit Reports',
       'page callback' => 'upitt_islandora_inventory_audit_reports_report',
       'page arguments' => array(4,5),
-      'type' => MENU_LOCAL_TASK,
+      'type' => MENU_CALLBACK,
       'file' => 'includes/reports.form.inc',
       'access arguments' => array(UPITT_ISLANDORA_INVENTORY_AUDIT),
     ),

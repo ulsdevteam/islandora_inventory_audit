@@ -32,11 +32,25 @@ function upitt_islandora_inventory_audit_schema() {
         'length' => 255,
         'not null' => FALSE,
       ),
+        /*
       'parent_pids' => array(
         'description' => 'The parent object pid values',
         'type' => 'varchar',
         'length' => 255,
         'not null' => FALSE,
+      ),
+         */
+      'fedora_model' => array(
+        'description' => 'The fedora model of the islandora object',
+        'type' => 'varchar',
+        'length' => 255,
+        'not null' => TRUE,
+      ),
+      'depositor' => array(
+        'description' => 'The depositor of the object',
+        'type' => 'varchar',
+        'length' => 255,
+        'not null' => TRUE,
       ),
       'datastreams_latestsize' => array(
         'description' => 'Total size of the latest version for all datastreams',
@@ -65,6 +79,31 @@ function upitt_islandora_inventory_audit_schema() {
       'u_islandora_pid' => array('islandora_pid'),
     ),
     'primary key' => array('id'), //this is last element of array
+  );
+
+  $schema['upitt_islandora_audit_items_parents_islandora'] = array(
+    'description' => t('The results of audit tests for objects based on django workflow.'),
+    'fields' => array(
+      'islandora_pid' => array(
+        'description' => 'The primary identifier of the master (child object) record',
+        'type' => 'varchar',
+        'length' => 255,
+        'not null' => TRUE,
+      ),
+      'parent_islandora_pid' => array(
+        'description' => 'The PID of the parent islandora object',
+        'type' => 'varchar',
+        'length' => 255,
+        'not null' => TRUE,
+      ),
+    ),
+    'indexes' => array(
+      'ss_islandora_pid' => array('islandora_pid'),
+      'ss_parent_islandora_pid' => array('parent_islandora_pid'),
+    ),
+    'unique keys' => array(
+      'u_islandora_pid_pair' => array('islandora_pid', 'parent_islandora_pid'),
+    ),
   );
 
   $schema['upitt_islandora_audit_items_workflow_record'] = array(
@@ -153,6 +192,31 @@ function upitt_islandora_inventory_audit_schema() {
 /*    'unique keys' => array(
       'u_equinox_path' => array('equinox_path'),
     ), */
+    'primary key' => array('id'), //this is last element of array
+  );
+
+  $schema['upitt_islandora_audit_items_photodb'] = array(
+    'description' => t('The results of audit tests for objects in photoDB.'),
+    'fields' => array(
+      'id' => array(
+        'description' => 'The primary identifier for the record',
+        'type' => 'serial',
+        'unsigned' => TRUE,
+        'not null' => TRUE,
+      ),
+      'barcode' => array(
+        'description' => 'the unique identifier of this object',
+        'type' => 'varchar',
+        'length' => 255,
+        'not null' => FALSE,
+      ),
+    ),
+    'indexes' => array(
+      'ss_barcode' => array('barcode'),
+    ),
+    'unique keys' => array(
+      'u_barcode' => array('barcode'),
+    ),
     'primary key' => array('id'), //this is last element of array
   );
   return $schema;

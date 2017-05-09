@@ -74,10 +74,20 @@ function upitt_islandora_inventory_audit_reports_report($table, $exclusive_strin
   $exclusive = ($exclusive_string == 'exclusive') ? TRUE : FALSE;
 
   // Check for ?page= value -- to support pagination.
-  $page = (isset($_GET['page'])) ? $_GET['page'] : 0;
+  $page = filter_input(INPUT_GET, 'page');;
+
+  // Check for any filter variable values.
+  $barcode = filter_input(INPUT_GET, 'barcode');
+  $depositor = filter_input(INPUT_GET, 'depositor');
+  $model = filter_input(INPUT_GET, 'REQUEST_URI');
+
+  $filters = array();
+  if ($barcode) { $filters['barcode'] = $barcode; }
+  if ($depositor) { $filters['depositor'] = $depositor; }
+  if ($model) { $filters['model'] = $model; }
 
   // Get records -- based on the offset - considering pagination.
-  $report = upitt_islandora_inventory_audit_get_report_table($table, $exclusive, $page);
+  $report = upitt_islandora_inventory_audit_get_report_table($table, $exclusive, $page, $filters);
 
   // Set full record count
   $count_rows = $report['count'];
@@ -103,9 +113,53 @@ function upitt_islandora_inventory_audit_reports_report($table, $exclusive_strin
   
   $links = array(); //l('test','/admin'),l('testlink2','/islandora'), );
 
-  return theme('upitt_islandora_inventory_audit_report',
-      array('table' => $human_readable_table, 'pager' => $report['pager'],
+  // Filter data form
+  $filter_controls_form = array(
+    'frame' => array(
+      '#type' => 'item',
+      '#title' => 'Filter',
+        '#name' => '',
+      'barcode' => array(
+        '#type' => 'textfield',
+        '#name' => 'barcode',
+        '#title' => 'Barcode',
+        '#default_value' => $barcode,
+      ),
+    ),
+  );
+  if ($table == 'islandora') {
+    $filter_controls_form['frame']['depositor'] = array(
+      '#type' => 'textfield',
+      '#name' => 'depositor',
+      '#title' => 'Depositor',
+      '#default_value' => $depositor,
+    );
+    $filter_controls_form['frame']['model'] = array(
+      '#type' => 'textfield',
+      '#name' => 'model',
+      '#title' => 'Model',
+      '#default_value' => $model,
+    );
+    $filter_controls_form['frame']['submit'] = array(
+      '#type' => 'submit',
+      '#value' => t('Filter'),
+    );
+  }
+  dpm($filter_controls_form);
+  // If the table is islandora, expose model and depositor
+  $filter_controls = drupal_render($filter_controls_form);
+  $request_uri = filter_input(INPUT_SERVER, 'REQUEST_URI');
+
+  $get_from_uri = (strstr($request_uri, '?') ?
+        substr($request_uri, 0, strpos($request_uri, '?'))
+          : $request_uri);
+  
+  $markup = theme('upitt_islandora_inventory_audit_report',
+      array('title' => $human_readable_table, 'filter_controls' => $filter_controls,
+        'pager' => $report['pager'], 'get_from_uri' => $get_from_uri,
         'table_markup' => $table_markup, 'count_rows' => $count_rows, 'links' => $links));
+
+  return $markup;
 }
 
 /**
@@ -114,6 +168,9 @@ function upitt_islandora_inventory_audit_reports_report($table, $exclusive_strin
  * @param string $table
  * @param boolean $exclusive
  * @param integer $page
+ * @param array $filters
+ *   array keys correspond to the fieldname, the array
+ *     value is the filter value for that field.
  * @return array
  *   'count' integer represents the total number of records for the given report.
  *   'header' array of fieldnames to be used in creating the table markup in the
@@ -121,7 +178,7 @@ function upitt_islandora_inventory_audit_reports_report($table, $exclusive_strin
  *   'rows' array of values that correspond to the header fields - also used in
  *     creating the table markup in the calling procedure.
  */
-function upitt_islandora_inventory_audit_get_report_table($table, $exclusive, $page) {
+function upitt_islandora_inventory_audit_get_report_table($table, $exclusive, $page, $filters) {
   module_load_include('inc', 'islandora', 'includes/utilities');
 
   $real_tablename = 'upitt_islandora_audit_items_' . $table;
@@ -137,7 +194,7 @@ function upitt_islandora_inventory_audit_get_report_table($table, $exclusive, $p
         $sql .= 'LEFT JOIN upitt_islandora_audit_items_bigfoot ab ON (ta.barcode = ab.barcode) ' .
                 'LEFT JOIN upitt_islandora_audit_items_workflow_record aw ON (ta.barcode = aw.barcode) ' .
                 'LEFT JOIN upitt_islandora_audit_items_photodb ap ON (ta.barcode = ap.barcode) ' .
-                'WHERE ab.barcode IS NULL AND ae.barcode IS NULL AND aw.barcode IS NULL ';
+                'WHERE ab.barcode IS NULL AND aw.barcode IS NULL ';
         break;
 
       default:

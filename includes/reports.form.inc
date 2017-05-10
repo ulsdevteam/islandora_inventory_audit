@@ -110,17 +110,25 @@ function upitt_islandora_inventory_audit_reports_report($table, $exclusive_strin
     break;
   }
 
-  $remaining_tables = ($table == 'islandora') ? 'any other inventories' : 'Islandora';
-  $human_readable_table = (($exclusive) ? 'What is in ' . $human_readable_table . ' that is NOT in ' . $remaining_tables:
-      $human_readable_table . ' inventory'
-    );
-  
+
   $links = array(); //l('test','/admin'),l('testlink2','/islandora'), );
 
   if ($exclusive_string == 'dsfs_by_depositor' && $table == 'islandora') {
     $filter_controls = '';
+    $human_readable_table = 'Datastream filesizes by Depositor';
+    $get_from_uri = '';
   }
   else {
+    $remaining_tables = ($table == 'islandora') ? 'any other inventories' : 'Islandora';
+    $human_readable_table = (($exclusive) ? 'What is in ' . $human_readable_table . ' that is NOT in ' . $remaining_tables:
+        $human_readable_table . ' inventory'
+      );
+
+    $request_uri = filter_input(INPUT_SERVER, 'REQUEST_URI');
+
+    $get_from_uri = (strstr($request_uri, '?') ?
+          substr($request_uri, 0, strpos($request_uri, '?'))
+            : $request_uri);
     // Filter data form
     $filter_controls_form = array(
       'frame' => array(
@@ -162,11 +170,7 @@ function upitt_islandora_inventory_audit_reports_report($table, $exclusive_strin
     // If the table is islandora, expose model and depositor.
     $filter_controls = drupal_render($filter_controls_form);
   }
-  $request_uri = filter_input(INPUT_SERVER, 'REQUEST_URI');
 
-  $get_from_uri = (strstr($request_uri, '?') ?
-        substr($request_uri, 0, strpos($request_uri, '?'))
-          : $request_uri);
   $markup = theme('upitt_islandora_inventory_audit_report',
       array('title' => $human_readable_table, 'filter_controls' => $filter_controls,
         'pager' => $report['pager'], 'get_from_uri' => $get_from_uri,
@@ -177,7 +181,6 @@ function upitt_islandora_inventory_audit_reports_report($table, $exclusive_strin
 
 function upitt_islandora_inventory_audit_get_datastreamfilesize_report($sort, $order) {
   $order = str_replace('% ', 'pct ', $order);
-  dpm($order);
   module_load_include('inc', 'islandora', 'includes/utilities');
 
   $real_tablename = 'upitt_islandora_audit_items_islandora';
@@ -189,7 +192,7 @@ function upitt_islandora_inventory_audit_get_datastreamfilesize_report($sort, $o
       'pct of All', '"extra" versions size', 'pct of depositor due to "extra" versions',
       'pct of total "extra" size'),
     'pct_fields' => array('pct of All', 'pct of depositor due to "extra" versions', 'pct of total "extra" size'),
-    'integer_fields' => array('datastreams latest size', 'datastreams total size', 'extra size'));
+    'integer_fields' => array('datastreams latest size', 'datastreams total size', '"extra" versions size'));
 
   // Get the total datastream filesize
   $result = db_query("SELECT SUM(datastreams_totalsize) `total` FROM upitt_islandora_audit_items_islandora");

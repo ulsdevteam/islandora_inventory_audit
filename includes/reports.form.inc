@@ -123,7 +123,7 @@ function upitt_islandora_inventory_audit_reports_report($table, $exclusive_strin
         '#type' => 'textfield',
         '#name' => 'barcode',
         '#title' => 'Barcode',
-        '#default_value' => $barcode,
+        '#value' => $barcode,
       ),
     ),
   );
@@ -132,28 +132,32 @@ function upitt_islandora_inventory_audit_reports_report($table, $exclusive_strin
       '#type' => 'textfield',
       '#name' => 'depositor',
       '#title' => 'Depositor',
-      '#default_value' => $depositor,
+      '#value' => $depositor,
     );
     $filter_controls_form['frame']['model'] = array(
       '#type' => 'textfield',
       '#name' => 'model',
       '#title' => 'Model',
-      '#default_value' => $model,
+      '#value' => $model,
     );
     $filter_controls_form['frame']['submit'] = array(
       '#type' => 'submit',
       '#value' => t('Filter'),
     );
   }
-  dpm($filter_controls_form);
-  // If the table is islandora, expose model and depositor
+  
+  // This is not conventional, but the way this report is used and handling of $_GET
+  // parameter values makes this form handle various table sources - based on the 
+  // $table and $exclusive values passed in.  This will render the form that allows
+  // filtering of the fields for THIS table specifically.  
+  // 
+  // If the table is islandora, expose model and depositor.
   $filter_controls = drupal_render($filter_controls_form);
   $request_uri = filter_input(INPUT_SERVER, 'REQUEST_URI');
 
   $get_from_uri = (strstr($request_uri, '?') ?
         substr($request_uri, 0, strpos($request_uri, '?'))
           : $request_uri);
-  
   $markup = theme('upitt_islandora_inventory_audit_report',
       array('title' => $human_readable_table, 'filter_controls' => $filter_controls,
         'pager' => $report['pager'], 'get_from_uri' => $get_from_uri,
@@ -185,6 +189,15 @@ function upitt_islandora_inventory_audit_get_report_table($table, $exclusive, $p
 
   $rows = array();
 
+  $where_add = '';
+  if (count($filters) > 0) {
+    $where_add_parts = array();
+    foreach ($filters as $fieldname => $value) {
+      $where_add_parts[] = '`' . $fieldname . '` like \'%' . addslashes(filter_xss($value)) . '%\'';
+    }
+    $where_add = 'WHERE ' . implode(' AND ', $where_add_parts);
+  }
+
   $fields = upitt_islandora_inventory_audit_get_fields($real_tablename);
   $sql = 'SELECT ta.' . implode(',ta.', $fields['fields']) . ' ' .
          'FROM ' . $real_tablename . ' ta ';
@@ -202,6 +215,10 @@ function upitt_islandora_inventory_audit_get_report_table($table, $exclusive, $p
                 'WHERE ai.barcode IS NULL ';
         break;
     }
+    $sql = str_replace("WHERE ", "WHERE " . $where_add . " AND ", $sql);
+  }
+  else {
+    $sql .= $where_add;
   }
   $result = db_query($sql);
   $result->execute();
@@ -254,7 +271,6 @@ function upitt_islandora_inventory_audit_get_fields($real_tablename) {
     case 'upitt_islandora_audit_items_islandora':
       $return['fields'][] = 'islandora_pid';
       $return['fields'][] = 'barcode';
-      /* $return['fields'][] = 'parent_pids'; */
       $return['fields'][] = 'fedora_model';
       $return['fields'][] = 'depositor';
       $return['fields'][] = 'datastreams_latestsize';

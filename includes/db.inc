@@ -365,6 +365,19 @@ function upitt_islandora_inventory_audit_populate_islandora_pid() {
 ' . print_r($e, true));
   }
 
+/* CAN DO THIS ALL AT ONCE AFTER THE TWO TABLES ARE CALCULATED
+UPDATE upitt_islandora_audit_items_islandora as ai
+JOIN (
+  SELECT aip.islandora_pid,
+  aip.parent_islandora_pid,
+  ai_i.depositor as par_depositor
+  FROM upitt_islandora_audit_items_islandora ai_i
+  JOIN upitt_islandora_audit_items_parents_islandora aip ON (aip.parent_islandora_pid = ai_i.islandora_pid)
+) as par ON par.islandora_pid = ai.islandora_pid
+SET ai.depositor = par.par_depositor
+WHERE ai.depositor = '';
+*/
+
   drupal_set_message('exiting upitt_islandora_inventory_audit_populate_islandora_pid');
 }
 
@@ -405,7 +418,6 @@ function upitt_islandora_inventory_audit_populate_achunkof_islandora_pid($offset
             'barcode' => $barcode,
             'datastreams_latestsize' => $datastream_size_sums['datastreams_latestsize'],
             'datastreams_totalsize' => $datastream_size_sums['datastreams_totalsize'],
-            /* 'parent_pids' => implode(",", $parents) */
             'fedora_model' => str_replace('info:fedora/islandora:', '', $datastream_sizes['RELS_EXT_hasModel_uri_s']),
             'depositor' => isset($datastream_sizes['mods_name_depositor_namePart_s']) ? $datastream_sizes['mods_name_depositor_namePart_s'] : '',
             ));

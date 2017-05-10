@@ -32,14 +32,6 @@ function upitt_islandora_inventory_audit_schema() {
         'length' => 255,
         'not null' => FALSE,
       ),
-        /*
-      'parent_pids' => array(
-        'description' => 'The parent object pid values',
-        'type' => 'varchar',
-        'length' => 255,
-        'not null' => FALSE,
-      ),
-         */
       'fedora_model' => array(
         'description' => 'The fedora model of the islandora object',
         'type' => 'varchar',
@@ -74,6 +66,8 @@ function upitt_islandora_inventory_audit_schema() {
     'indexes' => array(
       'ss_islandora_pid' => array('islandora_pid'),
       'ss_barcode' => array('barcode'),
+      'ss_fedora_model' => array('fedora_model'),
+      'ss_depositor' => array('depositor'),
     ),
     'unique keys' => array(
       'u_islandora_pid' => array('islandora_pid'),

@@ -365,18 +365,32 @@ function upitt_islandora_inventory_audit_populate_islandora_pid() {
 ' . print_r($e, true));
   }
 
-/* CAN DO THIS ALL AT ONCE AFTER THE TWO TABLES ARE CALCULATED
-UPDATE upitt_islandora_audit_items_islandora as ai
-JOIN (
-  SELECT aip.islandora_pid,
-  aip.parent_islandora_pid,
-  ai_i.depositor as par_depositor
-  FROM upitt_islandora_audit_items_islandora ai_i
-  JOIN upitt_islandora_audit_items_parents_islandora aip ON (aip.parent_islandora_pid = ai_i.islandora_pid)
-) as par ON par.islandora_pid = ai.islandora_pid
-SET ai.depositor = par.par_depositor
-WHERE ai.depositor = '';
-*/
+/* CAN DO THIS ALL AT ONCE AFTER THE TWO TABLES ARE CALCULATED - since this is
+ * more than 1.5 million records, the JOIN ~ UPDATE statement will run out of memory
+ * making a temporary index... so a script was used to update to set the depositor
+ * value for the page objects.
+ *
+ * set_time_limit(0);
+ * while ($processed = do_some()) {
+ *   echo ".";
+ * }
+ * function do_some() {
+ *   $result = db_query("SELECT ai.depositor, ai.islandora_pid, p.parent_islandora_pid as parent_pid, ai2.depositor `set` " .
+ *     "FROM upitt_islandora_audit_items_islandora ai " .
+ *     "JOIN upitt_islandora_audit_items_parents_islandora p ON (p.islandora_pid = ai.islandora_pid) " .
+ *     "JOIN upitt_islandora_audit_items_islandora ai2 ON (ai2.islandora_pid = p.parent_islandora_pid) " .
+ *     "WHERE ai.depositor = '' AND ai.fedora_model IN ('pageCModel', 'newspaperPageCModel', 'manuscriptPageCModel') " .
+ *     " AND ai2.depositor <> '' LIMIT 50000");
+ *   $result ->execute();
+ *   $processed = 0;
+ *   while($record = $result->fetchAssoc()) {
+ *     $r = db_query("UPDATE upitt_islandora_audit_items_islandora SET depositor = '" . addslashes($record['set']) . "' WHERE islandora_pid = '" . $record['islandora_pid'] . "'")->execute();
+ *     $processed++;
+ *   }
+ *   return $processed;
+ * }
+ *
+ */
 
   drupal_set_message('exiting upitt_islandora_inventory_audit_populate_islandora_pid');
 }

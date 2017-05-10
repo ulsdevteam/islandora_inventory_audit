@@ -34,8 +34,8 @@ function upitt_islandora_inventory_audit_reports_form() {
     'islandora' => array(
       '#type' => 'fieldset',
       '#title' => 'Islandora objects',
-      '#description' => l('Islandora inventory','/admin/islandora/inventory_audit/reports/islandora/all') .
-        " (" . number_format($inventory_record_counts['upitt_islandora_audit_items_islandora']) . " digital objects)<br>" .
+      '#description' => l('Datastream Filespace by Depositor','/admin/islandora/inventory_audit/reports/islandora/dsfs_by_depositor') . "<br>" .
+        l('Islandora inventory','/admin/islandora/inventory_audit/reports/islandora/all') . " (" . number_format($inventory_record_counts['upitt_islandora_audit_items_islandora']) . " digital objects)<br>" .
         l('Islandora inventory that is NOT in any other inventories','/admin/islandora/inventory_audit/reports/islandora/exclusive'),
     ),
     'workflow' => array(
@@ -87,7 +87,9 @@ function upitt_islandora_inventory_audit_reports_report($table, $exclusive_strin
   if ($model) { $filters['model'] = $model; }
 
   // Get records -- based on the offset - considering pagination.
-  $report = upitt_islandora_inventory_audit_get_report_table($table, $exclusive, $page, $filters);
+  $report = ($exclusive_string == 'dsfs_by_depositor') ?
+    upitt_islandora_inventory_audit_get_datastreamfilesize_report() :
+    upitt_islandora_inventory_audit_get_report_table($table, $exclusive, $page, $filters);
 
   // Set full record count
   $count_rows = $report['count'];
@@ -113,46 +115,51 @@ function upitt_islandora_inventory_audit_reports_report($table, $exclusive_strin
   
   $links = array(); //l('test','/admin'),l('testlink2','/islandora'), );
 
-  // Filter data form
-  $filter_controls_form = array(
-    'frame' => array(
-      '#type' => 'item',
-      '#title' => 'Filter',
-        '#name' => '',
-      'barcode' => array(
-        '#type' => 'textfield',
-        '#name' => 'barcode',
-        '#title' => 'Barcode',
-        '#value' => $barcode,
-      ),
-    ),
-  );
-  if ($table == 'islandora') {
-    $filter_controls_form['frame']['depositor'] = array(
-      '#type' => 'textfield',
-      '#name' => 'depositor',
-      '#title' => 'Depositor',
-      '#value' => $depositor,
-    );
-    $filter_controls_form['frame']['model'] = array(
-      '#type' => 'textfield',
-      '#name' => 'model',
-      '#title' => 'Model',
-      '#value' => $model,
-    );
-    $filter_controls_form['frame']['submit'] = array(
-      '#type' => 'submit',
-      '#value' => t('Filter'),
-    );
+  if ($exclusive_string == 'dsfs_by_depositor' && $table == 'islandora') {
+    $filter_controls = '';
   }
-  
-  // This is not conventional, but the way this report is used and handling of $_GET
-  // parameter values makes this form handle various table sources - based on the 
-  // $table and $exclusive values passed in.  This will render the form that allows
-  // filtering of the fields for THIS table specifically.  
-  // 
-  // If the table is islandora, expose model and depositor.
-  $filter_controls = drupal_render($filter_controls_form);
+  else {
+    // Filter data form
+    $filter_controls_form = array(
+      'frame' => array(
+        '#type' => 'item',
+        '#title' => 'Filter',
+          '#name' => '',
+        'barcode' => array(
+          '#type' => 'textfield',
+          '#name' => 'barcode',
+          '#title' => 'Barcode',
+          '#value' => $barcode,
+        ),
+      ),
+    );
+    if ($table == 'islandora') {
+      $filter_controls_form['frame']['depositor'] = array(
+        '#type' => 'textfield',
+        '#name' => 'depositor',
+        '#title' => 'Depositor',
+        '#value' => $depositor,
+      );
+      $filter_controls_form['frame']['model'] = array(
+        '#type' => 'textfield',
+        '#name' => 'model',
+        '#title' => 'Model',
+        '#value' => $model,
+      );
+      $filter_controls_form['frame']['submit'] = array(
+        '#type' => 'submit',
+        '#value' => t('Filter'),
+      );
+    }
+
+    // This is not conventional, but the way this report is used and handling of $_GET
+    // parameter values makes this form handle various table sources - based on the
+    // $table and $exclusive values passed in.  This will render the form that allows
+    // filtering of the fields for THIS table specifically.
+    //
+    // If the table is islandora, expose model and depositor.
+    $filter_controls = drupal_render($filter_controls_form);
+  }
   $request_uri = filter_input(INPUT_SERVER, 'REQUEST_URI');
 
   $get_from_uri = (strstr($request_uri, '?') ?
@@ -164,6 +171,67 @@ function upitt_islandora_inventory_audit_reports_report($table, $exclusive_strin
         'table_markup' => $table_markup, 'count_rows' => $count_rows, 'links' => $links));
 
   return $markup;
+}
+
+function upitt_islandora_inventory_audit_get_datastreamfilesize_report() {
+  module_load_include('inc', 'islandora', 'includes/utilities');
+
+  $real_tablename = 'upitt_islandora_audit_items_islandora';
+
+  $rows = array();
+
+  $fields = array('fields' => array('depositor', 'datastreams latest size', 'datastreams total size', '% of All', '"extra" versions size', '% due to "extra" versions'),
+                  'integer_fields' => array('datastreams latest size', 'datastreams total size', 'extra size'));
+
+  // Get the total datastream filesize
+  $result = db_query("SELECT SUM(datastreams_totalsize) `total` FROM upitt_islandora_audit_items_islandora");
+  $result->execute();
+  if ($result->rowCount()) {
+    $row = $result->fetchAssoc();
+    $total_size = $row['total'];
+  }
+  else {
+    $total_size = 1;
+  }
+
+  $sql = "SELECT depositor, SUM(datastreams_latestsize) `datastreams latest size`, " .
+         "SUM(datastreams_totalsize) `datastreams total size`, " .
+         "ROUND(SUM(datastreams_totalsize) / " . $total_size . " * 100, 4) `pct`, " .
+         "SUM(datastreams_totalsize) - SUM(datastreams_latestsize) `extra size`, " .
+         "ROUND((SUM(datastreams_totalsize) - SUM(datastreams_latestsize)) / " . $total_size . " * 100, 4) `pct extra size` " .
+         "FROM upitt_islandora_audit_items_islandora ai " .
+         "GROUP BY ai.depositor";
+
+  $result = db_query($sql);
+  $result->execute();
+  $count = $result->rowCount();
+
+  $result = db_query($sql);
+  $result->execute();
+
+  while($record = $result->fetchAssoc()) {
+    // loop through the elements of the record - and if the field matches one of
+    // the integer_fields, then use islandora_convert_bytes_to_human_readable() to format
+    // - and set a class that will right-align the value.
+    foreach ($record as $fieldname => $value) {
+      if (!(array_search($fieldname, $fields['integer_fields']) === FALSE)) {
+        $record[$fieldname] = array('data' => islandora_convert_bytes_to_human_readable($value), 'class' => array('numeric'));
+      }
+    }
+    $rows[] = $record;
+  }
+
+  $header = array();
+  foreach ($fields['fields'] as $field) {
+    // Also, add the class to right-align the header for integer columns.
+    if (!(array_search($field, $fields['integer_fields']) === FALSE)) {
+      $header[] = array('data' => str_replace("_", " ", $field), 'class' => array('numeric'));
+    } else {
+      $header[] = str_replace("_", " ", $field);
+    }
+  }
+
+  return array('count' => $count, 'header' => $header, 'rows' => $rows, 'pager' => '');
 }
 
 /**

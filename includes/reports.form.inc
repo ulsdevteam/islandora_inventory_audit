@@ -80,6 +80,8 @@ function upitt_islandora_inventory_audit_reports_report($table, $exclusive_strin
   $barcode = filter_input(INPUT_GET, 'barcode');
   $depositor = filter_input(INPUT_GET, 'depositor');
   $model = filter_input(INPUT_GET, 'REQUEST_URI');
+  $order = filter_input(INPUT_GET, 'order');
+  $sort = filter_input(INPUT_GET, 'sort');
 
   $filters = array();
   if ($barcode) { $filters['barcode'] = $barcode; }
@@ -88,7 +90,7 @@ function upitt_islandora_inventory_audit_reports_report($table, $exclusive_strin
 
   // Get records -- based on the offset - considering pagination.
   $report = ($exclusive_string == 'dsfs_by_depositor') ?
-    upitt_islandora_inventory_audit_get_datastreamfilesize_report() :
+    upitt_islandora_inventory_audit_get_datastreamfilesize_report($sort, $order) :
     upitt_islandora_inventory_audit_get_report_table($table, $exclusive, $page, $filters);
 
   // Set full record count
@@ -173,7 +175,9 @@ function upitt_islandora_inventory_audit_reports_report($table, $exclusive_strin
   return $markup;
 }
 
-function upitt_islandora_inventory_audit_get_datastreamfilesize_report() {
+function upitt_islandora_inventory_audit_get_datastreamfilesize_report($sort, $order) {
+  $order = str_replace('% ', 'pct ', $order);
+  dpm($order);
   module_load_include('inc', 'islandora', 'includes/utilities');
 
   $real_tablename = 'upitt_islandora_audit_items_islandora';
@@ -182,9 +186,9 @@ function upitt_islandora_inventory_audit_get_datastreamfilesize_report() {
 
   $fields = array(
     'fields' => array('depositor', 'datastreams latest size', 'datastreams total size',
-      '% of All', '"extra" versions size', '% of depositor due to "extra" versions',
-      '% of total "extra" size'),
-    'pct_fields' => array('pct', 'pct of depositor extra size', 'pct of total extra size'),
+      'pct of All', '"extra" versions size', 'pct of depositor due to "extra" versions',
+      'pct of total "extra" size'),
+    'pct_fields' => array('pct of All', 'pct of depositor due to "extra" versions', 'pct of total "extra" size'),
     'integer_fields' => array('datastreams latest size', 'datastreams total size', 'extra size'));
 
   // Get the total datastream filesize
@@ -200,15 +204,17 @@ function upitt_islandora_inventory_audit_get_datastreamfilesize_report() {
 
   $sql = "SELECT depositor, SUM(datastreams_latestsize) `datastreams latest size`, " .
          "SUM(datastreams_totalsize) `datastreams total size`, " .
-         "ROUND(SUM(datastreams_totalsize) / " . $total_size . " * 100, 4) `pct`, " .
-         "SUM(datastreams_totalsize) - SUM(datastreams_latestsize) `extra size`, " .
-         "ROUND((SUM(datastreams_totalsize) - SUM(datastreams_latestsize)) / SUM(datastreams_totalsize) * 100, 4) `pct of depositor extra size`, " .
-         "ROUND((SUM(datastreams_totalsize) - SUM(datastreams_latestsize)) / " . $total_size . " * 100, 4) `pct of total extra size` " .
+         "ROUND(SUM(datastreams_totalsize) / " . $total_size . " * 100, 4) `pct of All`, " .
+         "SUM(datastreams_totalsize) - SUM(datastreams_latestsize) `\"extra\" versions size`, " .
+         "ROUND((SUM(datastreams_totalsize) - SUM(datastreams_latestsize)) / SUM(datastreams_totalsize) * 100, 4) `pct of depositor due to \"extra\" versions`, " .
+         "ROUND((SUM(datastreams_totalsize) - SUM(datastreams_latestsize)) / " . $total_size . " * 100, 4) `pct of total \"extra\" size` " .
          "FROM upitt_islandora_audit_items_islandora ai " .
-         "GROUP BY ai.depositor";
+         "GROUP BY ai.depositor " .
+         ($order ? "ORDER BY `" . $order . "` " .$sort : '');
 
   $result = db_query($sql);
   $result->execute();
+
   $count = $result->rowCount();
 
   $result = db_query($sql);
@@ -231,14 +237,14 @@ function upitt_islandora_inventory_audit_get_datastreamfilesize_report() {
 
   $header = array();
   foreach ($fields['fields'] as $field) {
+    $header_text = str_replace(array("_", "pct"), array(" ", "%"), $field);
     // Also, add the class to right-align the header for integer columns.
     if (!(array_search($field, $fields['integer_fields']) === FALSE)) {
-      $header[] = array('data' => str_replace("_", " ", $field), 'class' => array('numeric'));
+      $header[] = array('data' => $header_text, 'class' => array('numeric'), 'field' => $field);
     } else {
-      $header[] = str_replace("_", " ", $field);
+      $header[] = array('data' => $header_text, 'field' => $field);
     }
   }
-
   return array('count' => $count, 'header' => $header, 'rows' => $rows, 'pager' => '');
 }
 

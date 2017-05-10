@@ -16,7 +16,12 @@ and open the template in the editor.
     display: inline-block;
 }
 
-.numeric {
-	text-align: right;
+.pct_fields, .numeric {
+    text-align: right;
 }
 
+.raw_integer {
+    font-family: monospace;
+    font-size: smaller;
+    color: #666;
+}

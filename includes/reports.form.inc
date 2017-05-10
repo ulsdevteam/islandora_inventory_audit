@@ -180,8 +180,12 @@ function upitt_islandora_inventory_audit_get_datastreamfilesize_report() {
 
   $rows = array();
 
-  $fields = array('fields' => array('depositor', 'datastreams latest size', 'datastreams total size', '% of All', '"extra" versions size', '% due to "extra" versions'),
-                  'integer_fields' => array('datastreams latest size', 'datastreams total size', 'extra size'));
+  $fields = array(
+    'fields' => array('depositor', 'datastreams latest size', 'datastreams total size',
+      '% of All', '"extra" versions size', '% of depositor due to "extra" versions',
+      '% of total "extra" size'),
+    'pct_fields' => array('pct', 'pct of depositor extra size', 'pct of total extra size'),
+    'integer_fields' => array('datastreams latest size', 'datastreams total size', 'extra size'));
 
   // Get the total datastream filesize
   $result = db_query("SELECT SUM(datastreams_totalsize) `total` FROM upitt_islandora_audit_items_islandora");
@@ -198,7 +202,8 @@ function upitt_islandora_inventory_audit_get_datastreamfilesize_report() {
          "SUM(datastreams_totalsize) `datastreams total size`, " .
          "ROUND(SUM(datastreams_totalsize) / " . $total_size . " * 100, 4) `pct`, " .
          "SUM(datastreams_totalsize) - SUM(datastreams_latestsize) `extra size`, " .
-         "ROUND((SUM(datastreams_totalsize) - SUM(datastreams_latestsize)) / " . $total_size . " * 100, 4) `pct extra size` " .
+         "ROUND((SUM(datastreams_totalsize) - SUM(datastreams_latestsize)) / SUM(datastreams_totalsize) * 100, 4) `pct of depositor extra size`, " .
+         "ROUND((SUM(datastreams_totalsize) - SUM(datastreams_latestsize)) / " . $total_size . " * 100, 4) `pct of total extra size` " .
          "FROM upitt_islandora_audit_items_islandora ai " .
          "GROUP BY ai.depositor";
 
@@ -215,7 +220,10 @@ function upitt_islandora_inventory_audit_get_datastreamfilesize_report() {
     // - and set a class that will right-align the value.
     foreach ($record as $fieldname => $value) {
       if (!(array_search($fieldname, $fields['integer_fields']) === FALSE)) {
-        $record[$fieldname] = array('data' => islandora_convert_bytes_to_human_readable($value), 'class' => array('numeric'));
+        $record[$fieldname] = array('data' => islandora_convert_bytes_to_human_readable($value) . "<br><span class='raw_integer'>" . number_format($value) . " bytes</span>", 'class' => array('numeric')) ;
+      }
+      if (!(array_search($fieldname, $fields['pct_fields']) === FALSE)) {
+        $record[$fieldname] = array('data' => $value, 'class' => array('pct_fields')) ;
       }
     }
     $rows[] = $record;

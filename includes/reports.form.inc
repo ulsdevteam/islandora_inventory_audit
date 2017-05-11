@@ -174,7 +174,8 @@ function upitt_islandora_inventory_audit_reports_report($table, $exclusive_strin
   $markup = theme('upitt_islandora_inventory_audit_report',
       array('title' => $human_readable_table, 'filter_controls' => $filter_controls,
         'pager' => $report['pager'], 'get_from_uri' => $get_from_uri,
-        'table_markup' => $table_markup, 'count_rows' => $count_rows, 'links' => $links));
+        'table_markup' => $table_markup, 'count_rows' => $count_rows, 'links' => $links,
+        'total_object_count' => $report['total_object_count']));
 
   return $markup;
 }
@@ -230,6 +231,7 @@ function upitt_islandora_inventory_audit_get_datastreamfilesize_report($sort, $o
   $result = db_query($sql);
   $result->execute();
 
+  $total_object_count = 0;
   while($record = $result->fetchAssoc()) {
     // loop through the elements of the record - and if the field matches one of
     // the integer_fields, then use islandora_convert_bytes_to_human_readable() to format
@@ -243,6 +245,7 @@ function upitt_islandora_inventory_audit_get_datastreamfilesize_report($sort, $o
       }
     }
     $record['depositor'] = $record['depositor'] . '<br><span class="raw_integer">' . number_format($record['depositors count']) . ' object' . ($record['depositors count'] == 1 ? '' : 's') . '</span>';
+    $total_object_count += $record['depositors count'];
     unset($record['depositors count']);
     $rows[] = $record;
   }
@@ -257,7 +260,7 @@ function upitt_islandora_inventory_audit_get_datastreamfilesize_report($sort, $o
       $header[] = array('data' => $header_text, 'field' => $field);
     }
   }
-  return array('count' => $count, 'header' => $header, 'rows' => $rows, 'pager' => '');
+  return array('count' => $count, 'header' => $header, 'rows' => $rows, 'pager' => '', 'total_object_count' => $total_object_count);
 }
 
 /**

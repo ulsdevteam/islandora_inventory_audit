@@ -179,6 +179,13 @@ function upitt_islandora_inventory_audit_reports_report($table, $exclusive_strin
   return $markup;
 }
 
+/**
+ * Function that will get the datastreams filesize report of the islandora inventory table.
+ *
+ * @param string $sort   direction of the sort ASC or DESC
+ * @param string $order  field name to be sorted upon
+ * @return associative array of table info that can be themed to output HTML of table.
+ */
 function upitt_islandora_inventory_audit_get_datastreamfilesize_report($sort, $order) {
   $order = str_replace('% ', 'pct ', $order);
   module_load_include('inc', 'islandora', 'includes/utilities');
@@ -205,7 +212,7 @@ function upitt_islandora_inventory_audit_get_datastreamfilesize_report($sort, $o
     $total_size = 1;
   }
 
-  $sql = "SELECT depositor, SUM(datastreams_latestsize) `datastreams latest size`, " .
+  $sql = "SELECT depositor, count(depositor) `depositors count`, SUM(datastreams_latestsize) `datastreams latest size`, " .
          "SUM(datastreams_totalsize) `datastreams total size`, " .
          "ROUND(SUM(datastreams_totalsize) / " . $total_size . " * 100, 4) `pct of All`, " .
          "SUM(datastreams_totalsize) - SUM(datastreams_latestsize) `\"extra\" versions size`, " .
@@ -235,6 +242,8 @@ function upitt_islandora_inventory_audit_get_datastreamfilesize_report($sort, $o
         $record[$fieldname] = array('data' => $value, 'class' => array('pct_fields')) ;
       }
     }
+    $record['depositor'] = $record['depositor'] . '<br><span class="raw_integer">' . number_format($record['depositors count']) . ' object' . ($record['depositors count'] == 1 ? '' : 's') . '</span>';
+    unset($record['depositors count']);
     $rows[] = $record;
   }
 

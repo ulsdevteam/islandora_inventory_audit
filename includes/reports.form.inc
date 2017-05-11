@@ -84,9 +84,9 @@ function upitt_islandora_inventory_audit_reports_report($table, $exclusive_strin
   $sort = filter_input(INPUT_GET, 'sort');
 
   $filters = array();
-  if ($barcode) { $filters['barcode'] = $barcode; }
-  if ($depositor) { $filters['depositor'] = $depositor; }
-  if ($model) { $filters['model'] = $model; }
+  if ($barcode) { $filters['ta.barcode'] = $barcode; }
+  if ($depositor) { $filters['ta.depositor'] = $depositor; }
+  if ($model) { $filters['ta.fedora_model'] = $model; }
 
   // Get records -- based on the offset - considering pagination.
   $report = ($exclusive_string == 'dsfs_by_depositor') ?
@@ -278,13 +278,13 @@ function upitt_islandora_inventory_audit_get_report_table($table, $exclusive, $p
   if (count($filters) > 0) {
     $where_add_parts = array();
     foreach ($filters as $fieldname => $value) {
-      $where_add_parts[] = '`' . $fieldname . '` like \'%' . addslashes(filter_xss($value)) . '%\'';
+      $where_add_parts[] = $fieldname . ' like \'%' . addslashes(filter_xss($value)) . '%\'';
     }
     $where_add = 'WHERE ' . implode(' AND ', $where_add_parts);
   }
 
   $fields = upitt_islandora_inventory_audit_get_fields($real_tablename);
-  $sql = 'SELECT ta.' . implode(',ta.', $fields['fields']) . ' ' .
+  $sql = 'SELECT ' . implode(', ', $fields['fields']) . ' ' .
          'FROM ' . $real_tablename . ' ta ';
   if ($exclusive) {
     switch ($table) {
@@ -300,7 +300,7 @@ function upitt_islandora_inventory_audit_get_report_table($table, $exclusive, $p
                 'WHERE ai.barcode IS NULL ';
         break;
     }
-    $sql = str_replace("WHERE ", "WHERE " . $where_add . " AND ", $sql);
+    $sql = str_replace("WHERE ", ($where_add ? $where_add . " AND " : "WHERE "), $sql);
   }
   else {
     $sql .= $where_add;
@@ -354,28 +354,28 @@ function upitt_islandora_inventory_audit_get_fields($real_tablename) {
   $return = array();
   switch ($real_tablename) {
     case 'upitt_islandora_audit_items_islandora':
-      $return['fields'][] = 'islandora_pid';
-      $return['fields'][] = 'barcode';
-      $return['fields'][] = 'fedora_model';
-      $return['fields'][] = 'depositor';
-      $return['fields'][] = 'datastreams_latestsize';
-      $return['fields'][] = 'datastreams_totalsize';
+      $return['fields'][] = 'ta.islandora_pid';
+      $return['fields'][] = 'ta.barcode';
+      $return['fields'][] = 'ta.fedora_model';
+      $return['fields'][] = 'ta.depositor';
+      $return['fields'][] = 'ta.datastreams_latestsize';
+      $return['fields'][] = 'ta.datastreams_totalsize';
       $return['integer_fields'] = array('datastreams_latestsize', 'datastreams_totalsize');
       break;
 
     case 'upitt_islandora_audit_items_bigfoot':
-      $return['fields'][] = 'barcode';
-      $return['fields'][] = 'bigfoot_path';
+      $return['fields'][] = 'ta.barcode';
+      $return['fields'][] = 'ta.bigfoot_path';
       $return['integer_fields'] = array();
       break;
 
     case 'upitt_islandora_audit_items_workflow_record':
-      $return['fields'][] = 'barcode';
+      $return['fields'][] = 'ta.barcode';
       $return['integer_fields'] = array();
       break;
 
     case 'upitt_islandora_audit_items_photodb':
-      $return['fields'][] = 'barcode';
+      $return['fields'][] = 'ta.barcode';
       $return['integer_fields'] = array();
       break;
 

@@ -47,6 +47,15 @@ function upitt_islandora_inventory_audit_admin_form() {
       '#type' => 'submit',
       '#value' => t('Populate ALL inventory tables'),
     ),
+    'bigfoottable' => array(
+      '#type' => 'fieldset',
+      '#title' => 'Recalc bigfoot table',
+      '#description' => 'This process will update a new field "in all_ingests" for each object',
+      'updatebigfoottable' => array(
+        '#type' => 'submit',
+        '#value' => t('Update bigfoot Table'),
+      ),
+    ),
     'islandora' => array(
       '#type' => 'fieldset',
       '#title' => number_format($inventory_record_counts['upitt_islandora_audit_items_islandora']) . ' Islandora objects',
@@ -112,6 +121,10 @@ function upitt_islandora_inventory_audit_admin_form_submit(array $form, array &$
 
     case 'edit-populate':
       upitt_islandora_inventory_audit_populate();
+      break;
+
+    case 'edit-updatebigfoottable':
+      upitt_islandora_inventory_updatebigfoottable();
       break;
 
     case 'edit-reset':

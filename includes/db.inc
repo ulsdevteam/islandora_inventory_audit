@@ -1,5 +1,6 @@
 <?php
 
+define('BIGFOOT_UPDATE_CHUNK_SIZE', 10000);
 define('UPITT_ISLANDORA_INVENTORY_SOLR_LIMIT', 2000000);
 define('UPITT_ISLANDORA_INVENTORY_SOLR_CHUNKSIZE', 50000);
 
@@ -137,6 +138,41 @@ function upitt_islandora_inventory_audit_sync_photodb() {
   return TRUE;
 }
 
+/**
+ * This process will update the "in_all_ingests" field based on whether or not the 
+ * barcode is in the all_ingests.txt file -- requires a upitt_workflow function call.
+ */
+function upitt_islandora_inventory_updatebigfoottable() {
+  set_time_limit(0);
+  module_load_include('inc', 'upitt_workflow', 'includes/utilities');
+  module_load_include('module', 'upitt_workflow', 'upitt_workflow');
+  $offset = 0;
+  $link = upitt_workflow_get_databaselink('default');
+
+  while ($num_updated = upitt_islandora_inventory_updatebigfoottable_chunk($offset, $link) > 0) {
+    $offset += BIGFOOT_UPDATE_CHUNK_SIZE;
+  }
+  die();
+}
+
+function upitt_islandora_inventory_updatebigfoottable_chunk($offset, $link) {
+  $sql = 'SELECT barcode FROM upitt_islandora_audit_items_bigfoot LIMIT ' . $offset . ', ' . BIGFOOT_UPDATE_CHUNK_SIZE;
+  echo $sql ."<hr>";
+  $result = mysqli_query($link, $sql);
+  if (!$result) {
+    upitt_workflow_sql_error_die($link, $sql);
+  }
+
+  $updated = 0;
+  while ($row = mysqli_fetch_assoc($result)) {
+    $found = upitt_workflow_check_for_object_in_all_ingests($row['barcode']);
+    $update = 'UPDATE upitt_islandora_audit_items_bigfoot SET in_all_ingests = ' . $found . ' WHERE barcode = \'' . $row['barcode'] . '\'';
+    echo $update . "<br>";
+    mysqli_query($link, $update);
+    $updated ++;
+  }
+  return $updated;
+}
 
 /**
  * This will perform all four areas "sync" functions.
@@ -200,7 +236,6 @@ function upitt_islandora_inventory_audit_populate_workflow_record() {
     upitt_workflow_sql_error_die($link, $item_query);
   }
 
-  $replace_sql = array();
   while ($row = mysqli_fetch_assoc($result)) {
     upitt_islandora_inventory_audit_insert('workflow_record', array('barcode' => $row['do_id']));
   }

@@ -82,11 +82,13 @@ function upitt_islandora_inventory_audit_reports_report($table, $exclusive_strin
   $model = filter_input(INPUT_GET, 'REQUEST_URI');
   $order = filter_input(INPUT_GET, 'order');
   $sort = filter_input(INPUT_GET, 'sort');
+  $in_all_ingests = filter_input(INPUT_GET, 'in_all_ingests');
 
   $filters = array();
   if ($barcode) { $filters['ta.barcode'] = $barcode; }
   if ($depositor) { $filters['ta.depositor'] = $depositor; }
   if ($model) { $filters['ta.fedora_model'] = $model; }
+  if ($in_all_ingests > -1 && $in_all_ingests < 2) { $filters['ta.in_all_ingests'] = $in_all_ingests; }
 
   // Get records -- based on the offset - considering pagination.
   $report = ($exclusive_string == 'dsfs_by_depositor') ?
@@ -156,11 +158,21 @@ function upitt_islandora_inventory_audit_reports_report($table, $exclusive_strin
         '#title' => 'Model',
         '#value' => $model,
       );
-      $filter_controls_form['frame']['submit'] = array(
-        '#type' => 'submit',
-        '#value' => t('Filter'),
+    }
+    elseif ($table == 'bigfoot') {
+      $filter_controls_form['frame']['in_all_ingests'] = array(
+        '#type' => 'textfield',
+        '#name' => 'in_all_ingests',
+        '#title' => 'In all_ingests',
+        '#value' => $in_all_ingests,
       );
     }
+
+    // The form is complete -- slap the Submit button to the bottom of the filtering form.
+    $filter_controls_form['frame']['submit'] = array(
+      '#type' => 'submit',
+      '#value' => t('Filter'),
+    );
 
     // This is not conventional, but the way this report is used and handling of $_GET
     // parameter values makes this form handle various table sources - based on the
@@ -346,12 +358,12 @@ function upitt_islandora_inventory_audit_get_report_table($table, $exclusive, $p
   foreach ($fields['fields'] as $field) {
     // Also, add the class to right-align the header for integer columns.
     if (!(array_search($field, $fields['integer_fields']) === FALSE)) {
-      $header[] = array('data' => str_replace("_", " ", $field), 'class' => array('numeric'));
+      $header[] = array('data' => str_replace(array("_", "ta."), " ", $field), 'class' => array('numeric'));
     } else {
-      $header[] = str_replace("_", " ", $field);
+      $header[] = str_replace(array("_", "ta."), " ", $field);
     }
   }
-  
+
   return array('count' => $count, 'header' => $header, 'rows' => $rows, 'pager' => $pager);
 }
 
@@ -378,6 +390,7 @@ function upitt_islandora_inventory_audit_get_fields($real_tablename) {
     case 'upitt_islandora_audit_items_bigfoot':
       $return['fields'][] = 'ta.barcode';
       $return['fields'][] = 'ta.bigfoot_path';
+      $return['fields'][] = 'ta.in_all_ingests';
       $return['integer_fields'] = array();
       break;
 

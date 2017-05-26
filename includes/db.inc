@@ -1,6 +1,6 @@
 <?php
 
-define('BIGFOOT_UPDATE_CHUNK_SIZE', 10000);
+define('BIGFOOT_UPDATE_CHUNK_SIZE', 1000);
 define('UPITT_ISLANDORA_INVENTORY_SOLR_LIMIT', 2000000);
 define('UPITT_ISLANDORA_INVENTORY_SOLR_CHUNKSIZE', 50000);
 
@@ -143,32 +143,32 @@ function upitt_islandora_inventory_audit_sync_photodb() {
  * barcode is in the all_ingests.txt file -- requires a upitt_workflow function call.
  */
 function upitt_islandora_inventory_updatebigfoottable() {
+  // TODO - this may be best if it just loops through the all_ingests.txt file and updates only those records.
   set_time_limit(0);
   module_load_include('inc', 'upitt_workflow', 'includes/utilities');
   module_load_include('module', 'upitt_workflow', 'upitt_workflow');
   $offset = 0;
   $link = upitt_workflow_get_databaselink('default');
 
-  while ($num_updated = upitt_islandora_inventory_updatebigfoottable_chunk($offset, $link) > 0) {
+  $all_ingests_file = file(drupal_get_path('module', 'upitt_workflow') . '/includes/all_ingests.txt');
+
+  while ($num_updated = upitt_islandora_inventory_updatebigfoottable_chunk($offset, $link, $all_ingests_file) > 0) {
     $offset += BIGFOOT_UPDATE_CHUNK_SIZE;
   }
-  die();
 }
 
-function upitt_islandora_inventory_updatebigfoottable_chunk($offset, $link) {
-  $sql = 'SELECT barcode FROM upitt_islandora_audit_items_bigfoot LIMIT ' . $offset . ', ' . BIGFOOT_UPDATE_CHUNK_SIZE;
-  echo $sql ."<hr>";
-  $result = mysqli_query($link, $sql);
-  if (!$result) {
-    upitt_workflow_sql_error_die($link, $sql);
-  }
+function upitt_islandora_inventory_updatebigfoottable_chunk($offset, $link, $all_ingests_file) {
+  $max = $offset + BIGFOOT_UPDATE_CHUNK_SIZE;
+  $max = min($max, count($all_ingests_file));
 
-  $updated = 0;
-  while ($row = mysqli_fetch_assoc($result)) {
-    $found = upitt_workflow_check_for_object_in_all_ingests($row['barcode']);
-    $update = 'UPDATE upitt_islandora_audit_items_bigfoot SET in_all_ingests = ' . $found . ' WHERE barcode = \'' . $row['barcode'] . '\'';
-    echo $update . "<br>";
-    mysqli_query($link, $update);
+  $d = date('H:i:s');
+  error_log('[' . $d . '] '. $offset . ' updating upitt_islandora_audit_items_bigfoot.in_all_ingests');
+
+  for ($i = $offset; $i < $max; $i++) {
+    $updated = 0;
+    $barcode = trim($all_ingests_file[$i]);
+    $update_sql = 'UPDATE upitt_islandora_audit_items_bigfoot SET in_all_ingests = 1 WHERE barcode = \'' . $barcode . '\'';
+    $result = mysqli_query($link, $update_sql);
     $updated ++;
   }
   return $updated;

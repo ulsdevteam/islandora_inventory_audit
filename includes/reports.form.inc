@@ -292,6 +292,10 @@ function upitt_islandora_inventory_audit_get_datastreamfilesize_report($sort, $o
  *     creating the table markup in the calling procedure.
  */
 function upitt_islandora_inventory_audit_get_report_table($table, $exclusive, $page, $filters) {
+  global $databases;
+  $drupal_database_name = $databases['default']['default']['database'];
+  $workflow_database_name = $databases['default']['mysql_new_workflow']['database'];  
+
   module_load_include('inc', 'islandora', 'includes/utilities');
 
   $real_tablename = 'upitt_islandora_audit_items_' . $table;
@@ -309,7 +313,12 @@ function upitt_islandora_inventory_audit_get_report_table($table, $exclusive, $p
 
   $fields = upitt_islandora_inventory_audit_get_fields($real_tablename);
   $sql = 'SELECT ' . implode(', ', $fields['fields']) . ' ' .
-         'FROM ' . $real_tablename . ' ta ';
+         'FROM ' . $drupal_database_name . '.' . $real_tablename . ' ta ';
+  if ($table == 'bigfoot') {
+    $sql .= 'LEFT JOIN ' . $drupal_database_name . '.upitt_islandora_audit_items_islandora ai ON (ta.barcode = ai.barcode) ' .
+            'JOIN ' . $workflow_database_name . '.item iwi ON (iwi.do_id = ta.barcode) ' .
+            'JOIN ' . $workflow_database_name . '.item_file iwf ON (iwf.item_id = iwi.id AND iwf.`use` = \'MASTER\') ';
+    }
   if ($exclusive) {
     switch ($table) {
       case 'islandora':
@@ -329,6 +338,7 @@ function upitt_islandora_inventory_audit_get_report_table($table, $exclusive, $p
   else {
     $sql .= $where_add;
   }
+
   $result = db_query($sql);
   $result->execute();
   $count = $result->rowCount();
@@ -391,6 +401,7 @@ function upitt_islandora_inventory_audit_get_fields($real_tablename) {
       $return['fields'][] = 'ta.barcode';
       $return['fields'][] = 'ta.bigfoot_path';
       $return['fields'][] = 'ta.in_all_ingests';
+      $return['fields'][] = 'iwf.name';
       $return['integer_fields'] = array();
       break;
 

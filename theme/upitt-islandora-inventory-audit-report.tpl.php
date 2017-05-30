@@ -1,6 +1,7 @@
-<?php print implode(" | " , $links); ?>
+<?php if ($csv_download_link): ?>
+  <a href="<?php print $csv_download_link; ?>">Download CSV</a><br />
+<?php endif; ?>
 <h3><?php print $title; ?></h3>
-  <?php print $get_from_uri; ?><hr>
 
 <?php if($count_rows): ?>
   <?php print number_format($count_rows); ?> record<?php print ($count_rows == 1) ? '' : 's'; ?><br>

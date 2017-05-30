@@ -83,6 +83,7 @@ function upitt_islandora_inventory_audit_reports_report($table, $exclusive_strin
   $order = filter_input(INPUT_GET, 'order');
   $sort = filter_input(INPUT_GET, 'sort');
   $in_all_ingests = filter_input(INPUT_GET, 'in_all_ingests');
+  $csv_download = filter_input(INPUT_GET, 'csv');
 
   $filters = array();
   if ($barcode) { $filters['ta.barcode'] = $barcode; }
@@ -92,8 +93,8 @@ function upitt_islandora_inventory_audit_reports_report($table, $exclusive_strin
 
   // Get records -- based on the offset - considering pagination.
   $report = ($exclusive_string == 'dsfs_by_depositor') ?
-    upitt_islandora_inventory_audit_get_datastreamfilesize_report($sort, $order) :
-    upitt_islandora_inventory_audit_get_report_table($table, $exclusive, $page, $filters);
+    upitt_islandora_inventory_audit_get_datastreamfilesize_report($sort, $order, $csv_download) :
+    upitt_islandora_inventory_audit_get_report_table($table, $exclusive, $page, $filters, $csv_download);
 
   // Set full record count
   $count_rows = $report['count'];
@@ -112,8 +113,12 @@ function upitt_islandora_inventory_audit_reports_report($table, $exclusive_strin
     break;
   }
 
+  $request_uri = filter_input(INPUT_SERVER, 'REQUEST_URI');
+  $get_from_uri = (strstr($request_uri, '?') ?
+        substr($request_uri, 0, strpos($request_uri, '?'))
+          : $request_uri);
 
-  $links = array(); //l('test','/admin'),l('testlink2','/islandora'), );
+  $csv_download_link = $get_from_uri . '?' . $_SERVER['QUERY_STRING'] . '&csv=1';
 
   if ($exclusive_string == 'dsfs_by_depositor' && $table == 'islandora') {
     $filter_controls = '';
@@ -186,7 +191,7 @@ function upitt_islandora_inventory_audit_reports_report($table, $exclusive_strin
   $markup = theme('upitt_islandora_inventory_audit_report',
       array('title' => $human_readable_table, 'filter_controls' => $filter_controls,
         'pager' => $report['pager'], 'get_from_uri' => $get_from_uri,
-        'table_markup' => $table_markup, 'count_rows' => $count_rows, 'links' => $links,
+        'table_markup' => $table_markup, 'count_rows' => $count_rows, 'csv_download_link' => $csv_download_link,
         'total_object_count' => $report['total_object_count']));
 
   return $markup;
@@ -199,7 +204,7 @@ function upitt_islandora_inventory_audit_reports_report($table, $exclusive_strin
  * @param string $order  field name to be sorted upon
  * @return associative array of table info that can be themed to output HTML of table.
  */
-function upitt_islandora_inventory_audit_get_datastreamfilesize_report($sort, $order) {
+function upitt_islandora_inventory_audit_get_datastreamfilesize_report($sort, $order, $csv_download = 0) {
   $order = str_replace('% ', 'pct ', $order);
   module_load_include('inc', 'islandora', 'includes/utilities');
 
@@ -291,7 +296,7 @@ function upitt_islandora_inventory_audit_get_datastreamfilesize_report($sort, $o
  *   'rows' array of values that correspond to the header fields - also used in
  *     creating the table markup in the calling procedure.
  */
-function upitt_islandora_inventory_audit_get_report_table($table, $exclusive, $page, $filters) {
+function upitt_islandora_inventory_audit_get_report_table($table, $exclusive, $page, $filters, $csv_download = 0) {
   global $databases;
   $drupal_database_name = $databases['default']['default']['database'];
   $workflow_database_name = $databases['default']['mysql_new_workflow']['database'];  
@@ -300,12 +305,13 @@ function upitt_islandora_inventory_audit_get_report_table($table, $exclusive, $p
 
   $real_tablename = 'upitt_islandora_audit_items_' . $table;
 
-  $rows = array();
+  $rows = $csv_name = array();
 
   $where_add = '';
   if (count($filters) > 0) {
     $where_add_parts = array();
     foreach ($filters as $fieldname => $value) {
+      $csv_name[] = $fieldname . '_' . $value;
       $where_add_parts[] = $fieldname . ' like \'%' . addslashes(filter_xss($value)) . '%\'';
     }
     $where_add = 'WHERE ' . implode(' AND ', $where_add_parts);
@@ -314,12 +320,8 @@ function upitt_islandora_inventory_audit_get_report_table($table, $exclusive, $p
   $fields = upitt_islandora_inventory_audit_get_fields($real_tablename);
   $sql = 'SELECT ' . implode(', ', $fields['fields']) . ' ' .
          'FROM ' . $drupal_database_name . '.' . $real_tablename . ' ta ';
-  if ($table == 'bigfoot') {
-    $sql .= 'LEFT JOIN ' . $drupal_database_name . '.upitt_islandora_audit_items_islandora ai ON (ta.barcode = ai.barcode) ' .
-            'JOIN ' . $workflow_database_name . '.item iwi ON (iwi.do_id = ta.barcode) ' .
-            'JOIN ' . $workflow_database_name . '.item_file iwf ON (iwf.item_id = iwi.id AND iwf.`use` = \'MASTER\') ';
-    }
   if ($exclusive) {
+    $csv_name[] = 'exclusive';
     switch ($table) {
       case 'islandora':
         $sql .= 'LEFT JOIN upitt_islandora_audit_items_bigfoot ab ON (ta.barcode = ab.barcode) ' .
@@ -327,30 +329,43 @@ function upitt_islandora_inventory_audit_get_report_table($table, $exclusive, $p
                 'LEFT JOIN upitt_islandora_audit_items_photodb ap ON (ta.barcode = ap.barcode) ' .
                 'WHERE ab.barcode IS NULL AND aw.barcode IS NULL ';
         break;
+      case 'bigfoot':
+        $sql .= 'LEFT JOIN ' . $drupal_database_name . '.upitt_islandora_audit_items_islandora ai ON (ta.barcode = ai.barcode) ' .
+                'JOIN ' . $workflow_database_name . '.item iwi ON (iwi.do_id = ta.barcode) ' .
+                'JOIN ' . $workflow_database_name . '.item_file iwf ON (iwf.item_id = iwi.id AND iwf.`use` = \'MASTER\') ' .
+                'WHERE ai.barcode IS NULL ';
+        break;
 
       default:
-        $sql .= 'LEFT JOIN upitt_islandora_audit_items_islandora ai ON (ta.barcode = ai.barcode) ' .
+        $sql .= 'LEFT JOIN ' . $drupal_database_name . '.upitt_islandora_audit_items_islandora ai ON (ta.barcode = ai.barcode) ' .
                 'WHERE ai.barcode IS NULL ';
         break;
     }
     $sql = str_replace("WHERE ", ($where_add ? $where_add . " AND " : "WHERE "), $sql);
   }
   else {
+    $csv_name[] = 'all';
+    if ($table == 'bigfoot') {
+      $sql .= 'LEFT JOIN ' . $drupal_database_name . '.upitt_islandora_audit_items_islandora ai ON (ta.barcode = ai.barcode) ' .
+              'JOIN ' . $workflow_database_name . '.item iwi ON (iwi.do_id = ta.barcode) ' .
+              'JOIN ' . $workflow_database_name . '.item_file iwf ON (iwf.item_id = iwi.id AND iwf.`use` = \'MASTER\') ';
+    }
     $sql .= $where_add;
   }
 
   $result = db_query($sql);
   $result->execute();
-  $count = $result->rowCount();
+  if (!$csv_download) {
+    $count = $result->rowCount();
+    $ps = UPITT_ISLANDORA_INVENTORY_AUDIT_REPORT_PAGESIZE;
+    $sql .= 'LIMIT ' . (($page) ? $page * $ps . ', ' . $ps : $ps);
 
-  $ps = UPITT_ISLANDORA_INVENTORY_AUDIT_REPORT_PAGESIZE;
-  $sql .= 'LIMIT ' . (($page) ? $page * $ps . ', ' . $ps : $ps);
-
-  $result = db_query($sql);
-  $result->execute();
+    $result = db_query($sql);
+    $result->execute();
   
-  pager_default_initialize($count, UPITT_ISLANDORA_INVENTORY_AUDIT_REPORT_PAGESIZE, $element = 0);
-  $pager = theme('pager',array("quantity"=>10));
+    pager_default_initialize($count, UPITT_ISLANDORA_INVENTORY_AUDIT_REPORT_PAGESIZE, $element = 0);
+    $pager = theme('pager',array("quantity"=>10));
+  }
 
   while($record = $result->fetchAssoc()) {
     // loop through the elements of the record - and if the field matches one of
@@ -374,7 +389,20 @@ function upitt_islandora_inventory_audit_get_report_table($table, $exclusive, $p
     }
   }
 
-  return array('count' => $count, 'header' => $header, 'rows' => $rows, 'pager' => $pager);
+  if ($csv_download) {
+    header("Content-type: text/csv");
+    header("Content-Disposition: attachment; filename=" . $table . '-' . implode('-', $csv_name) . ".csv");
+    header("Pragma: no-cache");
+    header("Expires: 0");
+    print implode(",", $header) . "\n";
+    foreach ($rows as $row) {
+      print implode(",", $row) . "\n";
+    }
+    exit;
+  }
+  else {
+    return array('count' => $count, 'header' => $header, 'rows' => $rows, 'pager' => $pager);
+  }
 }
 
 /**

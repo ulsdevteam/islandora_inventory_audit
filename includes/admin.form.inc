@@ -56,6 +56,15 @@ function upitt_islandora_inventory_audit_admin_form() {
         '#value' => t('Update bigfoot Table'),
       ),
     ),
+    'pagecounts' => array(
+      '#type' => 'fieldset',
+      '#title' => 'Recalc Page Counts table',
+      '#description' => 'This process will update a new table that tracks the page counts for objects in islandora and bigfoot',
+      'update_pagecounts' => array(
+        '#type' => 'submit',
+        '#value' => t('Update Page counts'),
+      ),
+    ),
     'islandora' => array(
       '#type' => 'fieldset',
       '#title' => number_format($inventory_record_counts['upitt_islandora_audit_items_islandora']) . ' Islandora objects',
@@ -125,6 +134,10 @@ function upitt_islandora_inventory_audit_admin_form_submit(array $form, array &$
 
     case 'edit-updatebigfoottable':
       upitt_islandora_inventory_updatebigfoottable();
+      break;
+
+    case 'edit-update-pagecounts':
+      upitt_islandora_inventory_pagecounts();
       break;
 
     case 'edit-reset':

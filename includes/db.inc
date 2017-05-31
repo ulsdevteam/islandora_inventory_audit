@@ -139,6 +139,51 @@ function upitt_islandora_inventory_audit_sync_photodb() {
 }
 
 /**
+ * This will update the page count values for all book objects from the islandora table -- 
+ * and gets a matching value from the workflow database by looking at the item_file table.
+ */
+function upitt_islandora_inventory_pagecounts() {
+  global $databases;
+  $drupal_database_name = $databases['default']['default']['database'];
+  $workflow_database_name = $databases['default']['mysql_new_workflow']['database'];
+
+  set_time_limit(0);
+  module_load_include('inc', 'upitt_workflow', 'includes/utilities');
+  module_load_include('module', 'upitt_workflow', 'upitt_workflow');
+  $link = upitt_workflow_get_databaselink('default');
+
+  // Step 1 - get all book records - with two subqueries to count page objects
+  // on islandora and to count page records in bigfoot.
+  $books_sql = "SELECT ii.barcode, ii.islandora_pid, " .
+               " (SELECT COUNT(*) FROM `" .$drupal_database_name . "`.`upitt_islandora_audit_items_islandora` " .
+               "  WHERE islandora_pid like CONCAT(ii.islandora_pid, '-%')) as `islandora_page_count`, " .
+               "(SELECT COUNT(*) " .
+               " FROM `" . $workflow_database_name . "`.`item` iwi " .
+               " JOIN `" . $workflow_database_name . "`.`item_file` iwf  ON (iwf.item_id = iwi.id AND iwf.`use` = 'MASTER') " .
+               " WHERE iwi.do_id = ii.barcode) as `bigfoot_page_count` " .
+               "FROM `" . $drupal_database_name . "`.`upitt_islandora_audit_items_islandora` ii " .
+               "WHERE ii.fedora_model IN ('bookCModel', 'manuscriptCModel', 'newspaperCModel')";
+  $result = mysqli_query($link, $books_sql);
+  if (!$result) {
+    upitt_workflow_sql_error_die($link, $books_sql);
+  }
+
+  // Step 2 - clear the table for the new results.
+  $truncate_result = mysqli_query($link, "TRUNCATE TABLE `upitt_islandora_audit_page_counts`");
+
+  // Step 3 - populate the page_count table with the results of query from Step 1.
+  while ($row = mysqli_fetch_assoc($result)) {
+    $insert_sql = "INSERT INTO `upitt_islandora_audit_page_counts` (`barcode`, `islandora_page_count`, `bigfoot_page_count`) " .
+                  "VALUES ('" . upitt_islandora_inventory_audit_html_escape_string($row['barcode']) . "', " .
+                  $row['islandora_page_count'] . ", " . $row['bigfoot_page_count'] . ")";
+    $result = mysqli_query($link, $insert_sql);
+  }
+  mysqli_close($link);
+
+}
+
+
+/**
  * This process will update the "in_all_ingests" field based on whether or not the 
  * barcode is in the all_ingests.txt file -- requires a upitt_workflow function call.
  */

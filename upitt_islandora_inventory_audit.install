@@ -72,7 +72,7 @@ function upitt_islandora_inventory_audit_schema() {
     'unique keys' => array(
       'u_islandora_pid' => array('islandora_pid'),
     ),
-    'primary key' => array('id'), //this is last element of array
+    'primary key' => array('id'),
   );
 
   $schema['upitt_islandora_audit_items_parents_islandora'] = array(
@@ -122,7 +122,7 @@ function upitt_islandora_inventory_audit_schema() {
     'unique keys' => array(
       'u_barcode' => array('barcode'),
     ),
-    'primary key' => array('id'), //this is last element of array
+    'primary key' => array('id'),
   );
 
   $schema['upitt_islandora_audit_items_bigfoot'] = array(
@@ -154,7 +154,7 @@ function upitt_islandora_inventory_audit_schema() {
 /*    'unique keys' => array(
       'u_barcode' => array('barcode'),
     ), */
-    'primary key' => array('id'), //this is last element of array
+    'primary key' => array('id'),
   );
 
   $schema['upitt_islandora_audit_items_equinox'] = array(
@@ -186,7 +186,7 @@ function upitt_islandora_inventory_audit_schema() {
 /*    'unique keys' => array(
       'u_equinox_path' => array('equinox_path'),
     ), */
-    'primary key' => array('id'), //this is last element of array
+    'primary key' => array('id'),
   );
 
   $schema['upitt_islandora_audit_items_photodb'] = array(
@@ -211,7 +211,33 @@ function upitt_islandora_inventory_audit_schema() {
     'unique keys' => array(
       'u_barcode' => array('barcode'),
     ),
-    'primary key' => array('id'), //this is last element of array
+    'primary key' => array('id'),
+  );
+
+
+  $schema['upitt_islandora_audit_page_counts'] = array(
+    'description' => t('The results of page_counts inventory objects on bigfoot and on islandora.'),
+    'fields' => array(
+      'barcode' => array(
+        'description' => 'the unique identifier of this object',
+        'type' => 'varchar',
+        'length' => 255,
+        'not null' => FALSE,
+      ),
+      'bigfoot_page_count' => array(
+        'description' => 'The total number of pages related to a bigfoot barcode',
+        'type' => 'int',
+        'size' => 'normal',
+        'unsigned' => TRUE,
+      ),
+      'islandora_page_count' => array(
+        'description' => 'The total number of pages related to the islandora object',
+        'type' => 'int',
+        'size' => 'normal',
+        'unsigned' => TRUE,
+      ),
+    ),
+    'primary key' => array('barcode'),
   );
   return $schema;
 }

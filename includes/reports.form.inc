@@ -50,7 +50,8 @@ function upitt_islandora_inventory_audit_reports_form() {
       '#title' => 'bigfoot object files',
       '#description' => l('Bigfoot inventory','/admin/islandora/inventory_audit/reports/bigfoot/all') . 
         " (" . number_format($inventory_record_counts['upitt_islandora_audit_items_bigfoot']) . " files)<br>" .
-        l('Bigfoot inventory that is NOT in Islandora','/admin/islandora/inventory_audit/reports/bigfoot/exclusive'),
+        l('Bigfoot inventory that is NOT in Islandora','/admin/islandora/inventory_audit/reports/bigfoot/exclusive') . "<br>" .
+        '<a href="/admin/islandora/inventory_audit/reports/bigfoot/exclusive?in_all_ingests=1">' . t('Bigfoot inventory DLXS! that is NOT in Islandora') . "</a>",
     ),
     'photodb' => array(
       '#type' => 'fieldset',
@@ -307,7 +308,7 @@ function upitt_islandora_inventory_audit_get_report_table($table, $exclusive, $p
 
   $rows = $csv_name = array();
 
-  $where_add = '';
+  $sql_where = $sql_joins = $sql_select = $where_add = '';
   if (count($filters) > 0) {
     $where_add_parts = array();
     foreach ($filters as $fieldname => $value) {
@@ -328,29 +329,44 @@ function upitt_islandora_inventory_audit_get_report_table($table, $exclusive, $p
                 'LEFT JOIN upitt_islandora_audit_items_workflow_record aw ON (ta.barcode = aw.barcode) ' .
                 'LEFT JOIN upitt_islandora_audit_items_photodb ap ON (ta.barcode = ap.barcode) ' .
                 'WHERE ab.barcode IS NULL AND aw.barcode IS NULL ';
+        $sql = str_replace("WHERE ", ($where_add ? $where_add . " AND " : "WHERE "), $sql);
         break;
       case 'bigfoot':
+        $sql_select = $sql;
+        $sql_joins = 'LEFT JOIN ' . $drupal_database_name . '.upitt_islandora_audit_items_islandora ai ON (ta.barcode = ai.barcode) ';
+        $sql_where = 'WHERE ai.barcode IS NULL ';
+        $sql_where = str_replace("WHERE ", ($where_add ? $where_add . " AND " : "WHERE "), $sql_where);
         $sql .= 'LEFT JOIN ' . $drupal_database_name . '.upitt_islandora_audit_items_islandora ai ON (ta.barcode = ai.barcode) ' .
                 'JOIN ' . $workflow_database_name . '.item iwi ON (iwi.do_id = ta.barcode) ' .
                 'JOIN ' . $workflow_database_name . '.item_file iwf ON (iwf.item_id = iwi.id AND iwf.`use` = \'MASTER\') ' .
-                'WHERE ai.barcode IS NULL ';
+                $sql_where;
         break;
 
       default:
         $sql .= 'LEFT JOIN ' . $drupal_database_name . '.upitt_islandora_audit_items_islandora ai ON (ta.barcode = ai.barcode) ' .
                 'WHERE ai.barcode IS NULL ';
+        $sql = str_replace("WHERE ", ($where_add ? $where_add . " AND " : "WHERE "), $sql);
         break;
     }
-    $sql = str_replace("WHERE ", ($where_add ? $where_add . " AND " : "WHERE "), $sql);
   }
   else {
     $csv_name[] = 'all';
     if ($table == 'bigfoot') {
-      $sql .= 'LEFT JOIN ' . $drupal_database_name . '.upitt_islandora_audit_items_islandora ai ON (ta.barcode = ai.barcode) ' .
+      $sql_select = $sql;
+      $sql_joins = 'LEFT JOIN ' . $drupal_database_name . '.upitt_islandora_audit_items_islandora ai ON (ta.barcode = ai.barcode) ';
+      $sql .= $sql_joins .
               'JOIN ' . $workflow_database_name . '.item iwi ON (iwi.do_id = ta.barcode) ' .
               'JOIN ' . $workflow_database_name . '.item_file iwf ON (iwf.item_id = iwi.id AND iwf.`use` = \'MASTER\') ';
+      $sql_where = $where_add;
     }
     $sql .= $where_add;
+  }
+
+  // if this is the bigfoot table, the sql must be a UNION
+  if ($table == 'bigfoot' && $sql_select) {
+    // replace the field in sql_select with an empty string
+    $sql_select = str_replace(', iwf.name', ', \'\'', $sql_select);
+    $sql = $sql .= ' UNION ' . $sql_select . $sql_joins . $sql_where;
   }
 
   $result = db_query($sql);

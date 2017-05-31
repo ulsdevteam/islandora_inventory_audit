@@ -154,30 +154,48 @@ function upitt_islandora_inventory_pagecounts() {
 
   // Step 1 - get all book records - with two subqueries to count page objects
   // on islandora and to count page records in bigfoot.
-  $books_sql = "SELECT ii.barcode, ii.islandora_pid, " .
+  $booki_sql = "SELECT ii.barcode, ii.islandora_pid, " .
                " (SELECT COUNT(*) FROM `" .$drupal_database_name . "`.`upitt_islandora_audit_items_islandora` " .
-               "  WHERE islandora_pid like CONCAT(ii.islandora_pid, '-%')) as `islandora_page_count`, " .
+               "  WHERE islandora_pid like CONCAT(ii.islandora_pid, '-%')) as `islandora_page_count` " .
+               "FROM `" . $drupal_database_name . "`.`upitt_islandora_audit_items_islandora` ii " .
+               "WHERE ii.fedora_model IN ('bookCModel', 'manuscriptCModel', 'newspaperCModel')";
+  $bookb_sql = "SELECT ii.barcode, ii.islandora_pid, " .
                "(SELECT COUNT(*) " .
                " FROM `" . $workflow_database_name . "`.`item` iwi " .
                " JOIN `" . $workflow_database_name . "`.`item_file` iwf  ON (iwf.item_id = iwi.id AND iwf.`use` = 'MASTER') " .
                " WHERE iwi.do_id = ii.barcode) as `bigfoot_page_count` " .
                "FROM `" . $drupal_database_name . "`.`upitt_islandora_audit_items_islandora` ii " .
                "WHERE ii.fedora_model IN ('bookCModel', 'manuscriptCModel', 'newspaperCModel')";
-  $result = mysqli_query($link, $books_sql);
-  if (!$result) {
-    upitt_workflow_sql_error_die($link, $books_sql);
-  }
 
-  // Step 2 - clear the table for the new results.
+// Step 2 - clear the table for the new results.
   $truncate_result = mysqli_query($link, "TRUNCATE TABLE `upitt_islandora_audit_page_counts`");
 
-  // Step 3 - populate the page_count table with the results of query from Step 1.
-  while ($row = mysqli_fetch_assoc($result)) {
-    $insert_sql = "INSERT INTO `upitt_islandora_audit_page_counts` (`barcode`, `islandora_page_count`, `bigfoot_page_count`) " .
+  // Step 3 - populate the page_count table with the results of $booki_sql from Step 1.
+  $result_i = mysqli_query($link, $booki_sql);
+  if (!$result_i) {
+    upitt_workflow_sql_error_die($link, $booki_sql);
+  }
+  dpm($booki_sql);
+  while ($row = mysqli_fetch_assoc($result_i)) {
+    $insert_sql = "INSERT INTO `upitt_islandora_audit_page_counts` (`barcode`, `islandora_page_count`) " .
                   "VALUES ('" . upitt_islandora_inventory_audit_html_escape_string($row['barcode']) . "', " .
-                  $row['islandora_page_count'] . ", " . $row['bigfoot_page_count'] . ")";
+                  $row['islandora_page_count'] . ")";
     $result = mysqli_query($link, $insert_sql);
   }
+
+  // Step 4 - update the page_count table with the results of $bookb_sql from Step 1.
+  $result_b = mysqli_query($link, $bookb_sql);
+  if (!$result_b) {
+    upitt_workflow_sql_error_die($link, $bookb_sql);
+  }
+  dpm($bookb_sql);
+  while ($row = mysqli_fetch_assoc($result_i)) {
+    $insert_sql = "UPDATE `upitt_islandora_audit_page_counts` SET `bigfoot_page_count` = " .
+                  $row['bigfoot_page_count'] . " WHERE `barcode` = '" . upitt_islandora_inventory_audit_html_escape_string($row['barcode']) . "'";
+    $result = mysqli_query($link, $insert_sql);
+  }
+
+
   mysqli_close($link);
 
 }

@@ -25,3 +25,9 @@ and open the template in the editor.
     font-size: smaller;
     color: #666;
 }
+
+.wrap_cell {
+    white-space: pre;
+    max-height: 3em;
+    overflow-y: auto;
+}

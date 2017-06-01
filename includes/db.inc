@@ -189,7 +189,7 @@ function upitt_islandora_inventory_pagecounts() {
     upitt_workflow_sql_error_die($link, $bookb_sql);
   }
   dpm($bookb_sql);
-  while ($row = mysqli_fetch_assoc($result_i)) {
+  while ($row = mysqli_fetch_assoc($result_b)) {
     $insert_sql = "UPDATE `upitt_islandora_audit_page_counts` SET `bigfoot_page_count` = " .
                   $row['bigfoot_page_count'] . " WHERE `barcode` = '" . upitt_islandora_inventory_audit_html_escape_string($row['barcode']) . "'";
     $result = mysqli_query($link, $insert_sql);

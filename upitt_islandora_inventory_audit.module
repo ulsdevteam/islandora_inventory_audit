@@ -90,7 +90,7 @@ function upitt_islandora_inventory_audit_theme() {
     'upitt_islandora_inventory_audit_report' => array(
       'variables' => array('table' => NULL, 'filter_controls' => '', 'get_from_uri' => '',
           'count_rows' => '', 'csv_download_link' => '', 'pager' => '', 'total_object_count' => '',
-          'table_markup' => ''),
+          'table_markup' => '', 'report_detail' => ''),
       'template' => 'theme/upitt-islandora-inventory-audit-report',
     ),
   );

@@ -3,6 +3,8 @@
 <?php endif; ?>
 <h3><?php print $title; ?></h3>
 
+<?php if ($report_detail) { print $report_detail; } ?>
+
 <?php if($count_rows): ?>
   <?php print number_format($count_rows); ?> record<?php print ($count_rows == 1) ? '' : 's'; ?><br>
 <?php endif; ?>

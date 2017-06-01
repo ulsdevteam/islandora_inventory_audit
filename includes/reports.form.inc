@@ -1,6 +1,7 @@
 <?php
 
 define('UPITT_ISLANDORA_INVENTORY_AUDIT_REPORT_PAGESIZE', 100);
+define('UPITT_ISLANDORA_INVENTORY_AUDIT_PAGE_DETAIL_REPORT_PAGESIZE', 100);
 
 /**
  * @file
@@ -36,7 +37,8 @@ function upitt_islandora_inventory_audit_reports_form() {
       '#title' => 'Islandora objects',
       '#description' => l('Datastream Filespace by Depositor','/admin/islandora/inventory_audit/reports/islandora/dsfs_by_depositor') . "<br>" .
         l('Islandora inventory','/admin/islandora/inventory_audit/reports/islandora/all') . " (" . number_format($inventory_record_counts['upitt_islandora_audit_items_islandora']) . " digital objects)<br>" .
-        l('Islandora inventory that is NOT in any other inventories','/admin/islandora/inventory_audit/reports/islandora/exclusive'),
+        l('Islandora inventory that is NOT in any other inventories','/admin/islandora/inventory_audit/reports/islandora/exclusive') . "<br>" .
+        '<a href="/admin/islandora/inventory_audit/reports/islandora/page_detail">' . t('Bigfoot / Islandora page difference comparison.') . '</a>',
     ),
     'workflow' => array(
       '#type' => 'fieldset',
@@ -91,11 +93,20 @@ function upitt_islandora_inventory_audit_reports_report($table, $exclusive_strin
   if ($depositor) { $filters['ta.depositor'] = $depositor; }
   if ($model) { $filters['ta.fedora_model'] = $model; }
   if ($in_all_ingests > -1 && $in_all_ingests < 2) { $filters['ta.in_all_ingests'] = $in_all_ingests; }
-
   // Get records -- based on the offset - considering pagination.
-  $report = ($exclusive_string == 'dsfs_by_depositor') ?
-    upitt_islandora_inventory_audit_get_datastreamfilesize_report($sort, $order, $csv_download) :
-    upitt_islandora_inventory_audit_get_report_table($table, $exclusive, $page, $filters, $csv_download);
+  switch ($exclusive_string) {
+    case 'dsfs_by_depositor':
+      $report = upitt_islandora_inventory_audit_get_datastreamfilesize_report($sort, $order, $csv_download);
+      break;
+
+    case 'page_detail':
+      $report = upitt_islandora_inventory_audit_get_page_detail_table($page, $filters, $barcode, $csv_download);
+      break;
+
+    default:
+      $report = upitt_islandora_inventory_audit_get_report_table($table, $exclusive, $page, $filters, $csv_download);
+      break;
+  }
 
   // Set full record count
   $count_rows = $report['count'];
@@ -120,8 +131,13 @@ function upitt_islandora_inventory_audit_reports_report($table, $exclusive_strin
           : $request_uri);
 
   $csv_download_link = $get_from_uri . '?' . $_SERVER['QUERY_STRING'] . '&csv=1';
-
-  if ($exclusive_string == 'dsfs_by_depositor' && $table == 'islandora') {
+  if ($exclusive_string == 'page_detail') {
+    $filter_controls = '';
+    $human_readable_table = 'Page Detail Comparison' . ($barcode ? ' for ' . l('Islandora: pitt:' . $barcode, '/islandora/object/pitt:' . $barcode . '/manage') . ' | ' .
+            l('Workflow: ' . $barcode, '/workflow_legacy/object/' . $barcode) : '');
+    $get_from_uri = '';
+  }
+  elseif ($exclusive_string == 'dsfs_by_depositor' && $table == 'islandora') {
     $filter_controls = '';
     $human_readable_table = 'Datastream filesizes by Depositor';
     $get_from_uri = '';
@@ -193,7 +209,8 @@ function upitt_islandora_inventory_audit_reports_report($table, $exclusive_strin
       array('title' => $human_readable_table, 'filter_controls' => $filter_controls,
         'pager' => $report['pager'], 'get_from_uri' => $get_from_uri,
         'table_markup' => $table_markup, 'count_rows' => $count_rows, 'csv_download_link' => $csv_download_link,
-        'total_object_count' => $report['total_object_count']));
+        'total_object_count' => $report['total_object_count'],
+        'report_detail' => $report['report_detail']));
 
   return $markup;
 }
@@ -278,7 +295,139 @@ function upitt_islandora_inventory_audit_get_datastreamfilesize_report($sort, $o
       $header[] = array('data' => $header_text, 'field' => $field);
     }
   }
-  return array('count' => $count, 'header' => $header, 'rows' => $rows, 'pager' => '', 'total_object_count' => $total_object_count);
+  if ($csv_download) {
+    header("Content-type: text/csv");
+    header("Content-Disposition: attachment; filename=datastream_filesize_report.csv");
+    header("Pragma: no-cache");
+    header("Expires: 0");
+    print implode(",", $header) . "\n";
+    foreach ($rows as $row) {
+      print implode(",", $row) . "\n";
+    }
+    exit;
+  }
+  else {
+    return array('count' => $count, 'header' => $header, 'rows' => $rows, 'pager' => '', 'total_object_count' => $total_object_count, 'report_detail' => '');
+  }
+}
+
+function upitt_islandora_inventory_audit_get_page_details_for_barcode($barcode, $csv_download) {
+  global $databases;
+  $drupal_database_name = $databases['default']['default']['database'];
+  $workflow_database_name = $databases['default']['mysql_new_workflow']['database'];
+
+  $sql_wf = "SELECT iwf.name " .
+            "FROM `" . $workflow_database_name . "`.`item` iwi " .
+            "JOIN `" . $workflow_database_name . "`.`item_file` iwf  ON (iwf.item_id = iwi.id AND iwf.`use` = 'MASTER') " .
+            "WHERE iwi.do_id = '" . $barcode . "' " . 
+            "ORDER BY iwf.name";
+  $result_wf = db_query($sql_wf);
+  $result_wf->execute();
+
+  $header_wf_io = array('bigfoot TIF filename', 'islandora_pid');
+
+  while($record = $result_wf->fetchAssoc()) {
+    $pid = 'pitt:' . $barcode . '-' . str_replace(".tif", "", $record['name']);
+    $rows[$pid] = array('bigfoot TIF filename' => $record['name'], 'islandora_pid' => '&nbsp;');
+  }
+
+  $sql_io = "SELECT barcode, islandora_pid " .
+            "FROM `upitt_islandora_audit_items_islandora` " .
+            "WHERE barcode like CONCAT('" . $barcode . "', '-%') " .
+            "ORDER BY islandora_pid";
+  $result_io = db_query($sql_io);
+  $result_io->execute();
+  while($record = $result_io->fetchAssoc()) {
+    $pid = $record['islandora_pid'];
+    $rows[$pid]['islandora_pid'] = $pid;
+  }
+
+  $not_in_bigfoot = $not_in_islandora = array();
+  foreach ($rows as $pid => $row) {
+    if ($row['islandora_pid'] == '&nbsp;') {
+      $not_in_islandora[] = $pid;
+    }
+    if (!isset($row['bigfoot TIF filename'])) {
+      $not_in_bigfoot[] = $pid;
+    }
+  }
+  $report_detail = '';
+  if (count($not_in_islandora) > 0) {
+    $report_detail .= '<h4>Missing pages in Islandora for</h4><ul><li>' . implode("</li><li>", $not_in_islandora) . "</li></ul>";
+  }
+  if (count($not_in_bigfoot) > 0) {
+    $report_detail .= '<h4>Missing files in Bigfoot for</h4><ul><li>' . implode("</li><li>", $not_in_bigfoot) . "</li></ul>";
+  }
+
+  $count = count($rows);
+  return array('count' => $count, 'header' => $header_wf_io, 'rows' => $rows, 'pager' => '', 'report_detail' => $report_detail);
+}
+
+function upitt_islandora_inventory_audit_get_page_detail_table($page, $filters, $barcode, $csv_download) {
+  if ($barcode) {
+    return upitt_islandora_inventory_audit_get_page_details_for_barcode($barcode, $csv_download);
+  }
+  module_load_include('inc', 'islandora', 'includes/utilities');
+  $sql = "SELECT pc.barcode, pc.bigfoot_page_count `bigfoot pages`, pc.islandora_page_count `islandora pages` " .
+           "FROM upitt_islandora_audit_page_counts pc " .
+           "WHERE bigfoot_page_count <> islandora_page_count ";
+
+  $fields = upitt_islandora_inventory_audit_get_fields('page_detail_report');
+  
+  if (!$csv_download) {
+    $result = db_query($sql);
+    $count = $result->rowCount();
+    $ps = UPITT_ISLANDORA_INVENTORY_AUDIT_PAGE_DETAIL_REPORT_PAGESIZE;
+    $sql .= 'LIMIT ' . (($page) ? $page * $ps . ', ' . $ps : $ps);
+
+    $result = db_query($sql);
+    $result->execute();
+
+    pager_default_initialize($count, UPITT_ISLANDORA_INVENTORY_AUDIT_PAGE_DETAIL_REPORT_PAGESIZE, $element = 0);
+    $pager = theme('pager',array("quantity"=>10));
+  } else {
+    $result = db_query($sql);
+    $result->execute();
+  }
+
+  while($record = $result->fetchAssoc()) {
+    // loop through the elements of the record - and if the field matches one of
+    // the wrap fields,
+    // - and set a class that will right-align the value.
+    foreach ($record as $fieldname => $value) {
+      if (!(array_search($fieldname, $fields['wrap_fields']) === FALSE)) {
+        $value = str_replace(",", ",\n", $value);
+        $record[$fieldname] = array('data' => $value, 'class' => array('wrap_cell'));
+      }
+    }
+    $record['options'] = array('data' => '<a href="/admin/islandora/inventory_audit/reports/islandora/page_detail?barcode=' . $record['barcode'] . '">' . t('Details') . '</a>');
+
+    $rows[] = $record;
+  }
+
+  $header = array();
+  foreach ($fields['fields'] as $field) {
+    // Also, add the class to right-align the header for integer columns.
+    if (!(array_search($field, $fields['integer_fields']) === FALSE)) {
+      $header[] = array('data' => str_replace(array("_", "pc."), " ", $field), 'class' => array('numeric'));
+    } else {
+      $header[] = str_replace(array("_", "pc."), " ", $field);
+    }
+  }
+  if ($csv_download) {
+    header("Content-type: text/csv");
+    header("Content-Disposition: attachment; filename=" . $table . '-' . implode('-', $csv_name) . ".csv");
+    header("Pragma: no-cache");
+    header("Expires: 0");
+    print implode(",", $header) . "\n";
+    foreach ($rows as $row) {
+      print implode(",", $row) . "\n";
+    }
+    exit;
+  }
+  else {
+    return array('count' => $count, 'header' => $header, 'rows' => $rows, 'pager' => $pager, 'report_detail' => '');
+  }
 }
 
 /**
@@ -392,6 +541,7 @@ function upitt_islandora_inventory_audit_get_report_table($table, $exclusive, $p
         $record[$fieldname] = array('data' => islandora_convert_bytes_to_human_readable($value), 'class' => array('numeric'));
       }
     }
+
     $rows[] = $record;
   }
 
@@ -417,7 +567,7 @@ function upitt_islandora_inventory_audit_get_report_table($table, $exclusive, $p
     exit;
   }
   else {
-    return array('count' => $count, 'header' => $header, 'rows' => $rows, 'pager' => $pager);
+    return array('count' => $count, 'header' => $header, 'rows' => $rows, 'pager' => $pager, 'report_detail' => '');
   }
 }
 
@@ -431,6 +581,18 @@ function upitt_islandora_inventory_audit_get_report_table($table, $exclusive, $p
 function upitt_islandora_inventory_audit_get_fields($real_tablename) {
   $return = array();
   switch ($real_tablename) {
+    case 'page_detail_report':
+      $return['fields'][] = 'pc.barcode';
+//      $return['fields'][] = 'pc.bigfoot_page_count';
+      $return['fields'][] = 'bigfoot pages';
+//      $return['fields'][] = 'bigfoot tif files';
+      $return['fields'][] = 'islandora pages';
+//      $return['fields'][] = 'islandora objects';
+      $return['fields'][] = 'options';
+      $return['wrap_fields'] = array ('islandora objects', 'bigfoot tif files');
+      $return['integer_fields'] = array('datastreams_latestsize', 'datastreams_totalsize');
+      break;
+    
     case 'upitt_islandora_audit_items_islandora':
       $return['fields'][] = 'ta.islandora_pid';
       $return['fields'][] = 'ta.barcode';

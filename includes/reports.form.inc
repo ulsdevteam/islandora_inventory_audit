@@ -369,8 +369,8 @@ function upitt_islandora_inventory_audit_get_page_detail_table($page, $filters, 
   }
   module_load_include('inc', 'islandora', 'includes/utilities');
   $sql = "SELECT pc.barcode, pc.bigfoot_page_count `bigfoot pages`, pc.islandora_page_count `islandora pages` " .
-           "FROM upitt_islandora_audit_page_counts pc " .
-           "WHERE bigfoot_page_count <> islandora_page_count ";
+         "FROM upitt_islandora_audit_page_counts pc " .
+         "WHERE bigfoot_page_count <> islandora_page_count ";
 
   $fields = upitt_islandora_inventory_audit_get_fields('page_detail_report');
   

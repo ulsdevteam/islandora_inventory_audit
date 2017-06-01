@@ -2,7 +2,7 @@
 
 define('BIGFOOT_UPDATE_CHUNK_SIZE', 1000);
 define('UPITT_ISLANDORA_INVENTORY_SOLR_LIMIT', 2000000);
-define('UPITT_ISLANDORA_INVENTORY_SOLR_CHUNKSIZE', 50000);
+define('UPITT_ISLANDORA_INVENTORY_SOLR_CHUNKSIZE', 50);
 
 /**
  * @file
@@ -175,7 +175,6 @@ function upitt_islandora_inventory_pagecounts() {
   if (!$result_i) {
     upitt_workflow_sql_error_die($link, $booki_sql);
   }
-  dpm($booki_sql);
   while ($row = mysqli_fetch_assoc($result_i)) {
     $insert_sql = "INSERT INTO `upitt_islandora_audit_page_counts` (`barcode`, `islandora_page_count`) " .
                   "VALUES ('" . upitt_islandora_inventory_audit_html_escape_string($row['barcode']) . "', " .
@@ -188,7 +187,6 @@ function upitt_islandora_inventory_pagecounts() {
   if (!$result_b) {
     upitt_workflow_sql_error_die($link, $bookb_sql);
   }
-  dpm($bookb_sql);
   while ($row = mysqli_fetch_assoc($result_b)) {
     $insert_sql = "UPDATE `upitt_islandora_audit_page_counts` SET `bigfoot_page_count` = " .
                   $row['bigfoot_page_count'] . " WHERE `barcode` = '" . upitt_islandora_inventory_audit_html_escape_string($row['barcode']) . "'";
@@ -452,8 +450,9 @@ function upitt_islandora_inventory_audit_populate_islandora_pid() {
     // repeatedly call this to process this many records each time:
     //   UPITT_ISLANDORA_INVENTORY_SOLR_CHUNKSIZE
     $offset = 0;
-    while ($offset < $numFound) {
-      upitt_islandora_inventory_audit_populate_achunkof_islandora_pid($offset);
+    $total = 0;
+    while ($total < $numFound) {
+      $total += upitt_islandora_inventory_audit_populate_achunkof_islandora_pid($offset);
       $offset = $offset + UPITT_ISLANDORA_INVENTORY_SOLR_CHUNKSIZE;
     }
   }
@@ -544,6 +543,7 @@ function upitt_islandora_inventory_audit_populate_achunkof_islandora_pid($offset
 ' - ' . $_SERVER['REQUEST_URI'] . '
 ' . print_r($e, true));
   }
+  return $numFound;
 }
 
 function upitt_islandora_inventory_all_record_counts() {

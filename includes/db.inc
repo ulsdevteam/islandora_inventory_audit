@@ -525,6 +525,7 @@ function upitt_islandora_inventory_audit_populate_achunkof_islandora_pid($offset
     $tmp = json_decode($search_results->getRawResponse(), TRUE);
 
     $results = array();
+    $numAdded = 0;
     $numFound = $tmp['response']['numFound'];
     if ($tmp['response']['numFound'] > 0) {
       foreach ($tmp['response']['docs'] as $k=>$rec) {
@@ -543,6 +544,7 @@ function upitt_islandora_inventory_audit_populate_achunkof_islandora_pid($offset
             ));
         // add records for the object to parent relationhips
         upitt_islandora_inventory_audit_insert_islandora_parents($pid, $parents);
+        $numAdded++;
       }
     }
   }
@@ -552,7 +554,7 @@ function upitt_islandora_inventory_audit_populate_achunkof_islandora_pid($offset
 ' - ' . $_SERVER['REQUEST_URI'] . '
 ' . print_r($e, true));
   }
-  return $numFound;
+  return $numAdded;
 }
 
 function upitt_islandora_inventory_all_record_counts() {

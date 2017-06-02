@@ -360,7 +360,7 @@ function upitt_islandora_inventory_audit_get_page_details_for_barcode($barcode, 
   }
 
   $count = count($rows);
-  return array('count' => $count, 'header' => $header_wf_io, 'rows' => $rows, 'pager' => '', 'report_detail' => $report_detail);
+  return array('count' => $count, 'header' => $header_wf_io, 'rows' => $rows, 'pager' => '', 'total_object_count' => '', 'report_detail' => $report_detail);
 }
 
 function upitt_islandora_inventory_audit_get_page_detail_table($page, $filters, $barcode, $csv_download) {
@@ -426,7 +426,7 @@ function upitt_islandora_inventory_audit_get_page_detail_table($page, $filters, 
     exit;
   }
   else {
-    return array('count' => $count, 'header' => $header, 'rows' => $rows, 'pager' => $pager, 'report_detail' => '');
+    return array('count' => $count, 'header' => $header, 'rows' => $rows, 'pager' => $pager, 'total_object_count' => '', 'report_detail' => '');
   }
 }
 
@@ -567,7 +567,7 @@ function upitt_islandora_inventory_audit_get_report_table($table, $exclusive, $p
     exit;
   }
   else {
-    return array('count' => $count, 'header' => $header, 'rows' => $rows, 'pager' => $pager, 'report_detail' => '');
+    return array('count' => $count, 'header' => $header, 'rows' => $rows, 'pager' => $pager, 'total_object_count' => '', 'report_detail' => '');
   }
 }
 

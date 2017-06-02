@@ -72,6 +72,11 @@ function upitt_islandora_inventory_audit_admin_form() {
         '#type' => 'submit',
         '#value' => t('Inventory Islandora'),
       ),
+      'update_depositors_islandora' => array(
+        '#type' => 'submit',
+        '#prefix' => '<i style="color:red">This must be done after the "Inventory Islandora" process is completed : </i> ',
+        '#value' => t('Update Depositors for all Islandora objects'),
+      ),
     ),
     'workflow' => array(
       '#type' => 'fieldset',
@@ -116,6 +121,10 @@ function upitt_islandora_inventory_audit_admin_form_submit(array $form, array &$
       upitt_islandora_inventory_audit_sync_islandora();
       break;
 
+    case 'edit-update-depositors-islandora':
+      upitt_islandora_inventory_audit_update_depositors();
+      break;
+    
     case 'edit-sync-workflow':
       upitt_islandora_inventory_audit_sync_workflow();
       break;

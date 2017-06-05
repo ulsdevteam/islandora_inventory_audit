@@ -2,7 +2,7 @@
 
 define('BIGFOOT_UPDATE_CHUNK_SIZE', 1000);
 define('UPITT_ISLANDORA_INVENTORY_SOLR_LIMIT', 2000000);
-define('UPITT_ISLANDORA_INVENTORY_SOLR_CHUNKSIZE', 50);
+define('UPITT_ISLANDORA_INVENTORY_SOLR_CHUNKSIZE', 5000);
 
 /**
  * @file
@@ -453,7 +453,7 @@ function upitt_islandora_inventory_audit_populate_islandora_pid() {
     $total = 0;
     while ($total < $numFound) {
       $total += upitt_islandora_inventory_audit_populate_achunkof_islandora_pid($offset);
-      $offset = $offset + UPITT_ISLANDORA_INVENTORY_SOLR_CHUNKSIZE;
+      $offset = $offset + $total;
     }
   }
   catch (Exception $e) {

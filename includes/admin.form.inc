@@ -47,15 +47,6 @@ function upitt_islandora_inventory_audit_admin_form() {
       '#type' => 'submit',
       '#value' => t('Populate ALL inventory tables'),
     ),
-    'bigfoottable' => array(
-      '#type' => 'fieldset',
-      '#title' => 'Recalc bigfoot table',
-      '#description' => 'This process will update a new field "in all_ingests" for each object',
-      'updatebigfoottable' => array(
-        '#type' => 'submit',
-        '#value' => t('Update bigfoot Table'),
-      ),
-    ),
     'pagecounts' => array(
       '#type' => 'fieldset',
       '#title' => 'Recalc Page Counts table',
@@ -74,7 +65,8 @@ function upitt_islandora_inventory_audit_admin_form() {
       ),
       'update_depositors_islandora' => array(
         '#type' => 'submit',
-        '#prefix' => '<i style="color:red">This must be done after the "Inventory Islandora" process is completed : </i> ',
+        '#prefix' => '<br><i style="color:red">This must be done after the "Inventory Islandora" process is completed : </i> ',
+        '#suffix' => 'Updates the depositor value for each islandora inventory record object - including page objects.',
         '#value' => t('Update Depositors for all Islandora objects'),
       ),
     ),
@@ -92,6 +84,13 @@ function upitt_islandora_inventory_audit_admin_form() {
       'sync_bigfoot' => array(
         '#type' => 'submit',
         '#value' => t('Inventory bigfoot'),
+      ),
+      'updatebigfoottable' => array(
+        '#type' => 'submit',
+        '#prefix' => '<br><i style="color:red">This must be done after the "Inventory bigfoot" process is completed : </i>',
+        '#suffix' => 'Updates a new field "in all_ingests" for each object.',
+        '#value' => t('Update bigfoot Table'),
+        '#description' => 'This process will update a new field "in all_ingests" for each object',
       ),
     ),
   );

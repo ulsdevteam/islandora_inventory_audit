@@ -111,6 +111,11 @@ function upitt_islandora_inventory_audit_reports_report($table, $exclusive_strin
   // Set full record count
   $count_rows = $report['count'];
 
+  foreach ($report['rows'] as $k => $row) {
+    if (isset($row['barcode'])) {
+      $report['rows'][$k]['barcode'] = '<a href="/islandora/object/pitt:' . $row['barcode'] . '">' . $row['barcode'] . '</a>';
+    }
+  }
   // Build table from records and theme it for output.
   $table_markup = theme('table', array('header' => $report['header'],
     'rows' => $report['rows']));
@@ -517,7 +522,6 @@ function upitt_islandora_inventory_audit_get_report_table($table, $exclusive, $p
     $sql_select = str_replace(', iwf.name', ', \'\'', $sql_select);
     $sql = $sql .= ' UNION ' . $sql_select . $sql_joins . $sql_where;
   }
-
   $result = db_query($sql);
   $result->execute();
   if (!$csv_download) {
@@ -608,7 +612,7 @@ function upitt_islandora_inventory_audit_get_fields($real_tablename) {
       $return['fields'][] = 'ta.bigfoot_path';
       $return['fields'][] = 'ta.in_all_ingests';
       $return['fields'][] = 'iwf.name';
-      $return['integer_fields'] = array();
+      $return['integer_fields'] = array('');
       break;
 
     case 'upitt_islandora_audit_items_workflow_record':

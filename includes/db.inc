@@ -355,7 +355,8 @@ function upitt_islandora_inventory_audit_populate_bigfoot_path() {
         // For this section, the barcode can come from the filename
         $path_parts = explode("/", $path);
         $barcode = (count($path_parts) > 0) ? $path_parts[count($path_parts) - 1] : '';
-        $pseudo_barcode = $barcode . '-' . $fname_only;
+        // Only set this as the barcode if the two parts are not the same... 
+        $pseudo_barcode = ($barcode <> $fname_only) ? $barcode . '-' . $fname_only : $fname_only;
 
         // shift off the last element (the extension) -- and reimplode to get just the filename portion
         // Look at the filename -- if it looks like it is a page object (####.tif), then add that reference as

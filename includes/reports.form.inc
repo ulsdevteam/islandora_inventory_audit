@@ -305,9 +305,17 @@ function upitt_islandora_inventory_audit_get_datastreamfilesize_report($sort, $o
     header("Content-Disposition: attachment; filename=datastream_filesize_report.csv");
     header("Pragma: no-cache");
     header("Expires: 0");
-    print implode(",", $header) . "\n";
+    $use_header = array();
+    foreach ($header as $i => $heading) {
+      $use_header[$i] = strip_tags(isset($heading['data']) ? $heading['data'] : $heading);
+    }
+    print implode(",", $use_header) . "\n";
     foreach ($rows as $row) {
-      print implode(",", $row) . "\n";
+      $use_row = array();
+      foreach ($row as $i => $cell) {
+        $use_row[$i] = '"' . strip_tags(isset($cell['data']) ? str_replace("<br>", " ", $cell['data']) : $cell) . '"';
+      }
+      print implode(",", $use_row) . "\n";
     }
     exit;
   }
@@ -493,12 +501,13 @@ function upitt_islandora_inventory_audit_get_report_table($table, $exclusive, $p
         $sql .= 'LEFT JOIN ' . $drupal_database_name . '.upitt_islandora_audit_items_islandora ai ON (ta.barcode = ai.barcode) ' .
                 'JOIN ' . $workflow_database_name . '.item iwi ON (iwi.do_id = ta.barcode) ' .
                 'JOIN ' . $workflow_database_name . '.item_file iwf ON (iwf.item_id = iwi.id AND iwf.`use` = \'MASTER\') ' .
+                'JOIN ' . $workflow_database_name . '.`transaction` t ON (t.item_id = iwi.id AND t.transaction_action_id = 3) ' .
                 $sql_where;
         break;
 
       default:
         $sql .= 'LEFT JOIN ' . $drupal_database_name . '.upitt_islandora_audit_items_islandora ai ON (ta.barcode = ai.barcode) ' .
-                'WHERE ai.barcode IS NULL ';
+                'WHERE ai.barcode IS NULL GROUP BY iwi.id ';
         $sql = str_replace("WHERE ", ($where_add ? $where_add . " AND " : "WHERE "), $sql);
         break;
     }
@@ -515,14 +524,14 @@ function upitt_islandora_inventory_audit_get_report_table($table, $exclusive, $p
     }
     $sql .= $where_add;
   }
-
   // if this is the bigfoot table, the sql must be a UNION
   if ($table == 'bigfoot' && $sql_select) {
     // replace the field in sql_select with an empty string
     $sql_select = str_replace(', iwf.name', ', \'\'', $sql_select);
-    $sql = $sql .= ' UNION ' . $sql_select . $sql_joins . $sql_where;
+    $sql = $sql . ' UNION ' . $sql_select . $sql_joins . $sql_where;
   }
   $result = db_query($sql);
+
   $result->execute();
   if (!$csv_download) {
     $count = $result->rowCount();

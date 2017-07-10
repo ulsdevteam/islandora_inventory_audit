@@ -142,7 +142,7 @@ function upitt_islandora_inventory_audit_sync_photodb() {
  * This will update the page count values for all book objects from the islandora table -- 
  * and gets a matching value from the workflow database by looking at the item_file table.
  */
-function upitt_islandora_inventory_pagecounts() {
+function upitt_islandora_inventory_pagecounts($pid = NULL) {
   global $databases;
   $drupal_database_name = $databases['default']['default']['database'];
   $workflow_database_name = $databases['default']['mysql_new_workflow']['database'];
@@ -167,8 +167,14 @@ function upitt_islandora_inventory_pagecounts() {
                "FROM `" . $drupal_database_name . "`.`upitt_islandora_audit_items_islandora` ii " .
                "WHERE ii.fedora_model IN ('bookCModel', 'manuscriptCModel', 'newspaperCModel')";
 
-// Step 2 - clear the table for the new results.
-  $truncate_result = mysqli_query($link, "TRUNCATE TABLE `upitt_islandora_audit_page_counts`");
+  if (!is_null($pid)) {
+    $booki_sql .= " AND ii.islandora_pid = '" . $pid . "'";
+    $bookb_sql .= " AND ii.islandora_pid = '" . $pid . "'";
+  }
+  else {
+    // Step 2 - clear the table for the new results.
+    $truncate_result = mysqli_query($link, "TRUNCATE TABLE `upitt_islandora_audit_page_counts`");
+  }
 
   // Step 3 - populate the page_count table with the results of $booki_sql from Step 1.
   $result_i = mysqli_query($link, $booki_sql);
@@ -176,7 +182,7 @@ function upitt_islandora_inventory_pagecounts() {
     upitt_workflow_sql_error_die($link, $booki_sql);
   }
   while ($row = mysqli_fetch_assoc($result_i)) {
-    $insert_sql = "INSERT INTO `upitt_islandora_audit_page_counts` (`barcode`, `islandora_page_count`) " .
+    $insert_sql = "REPLACE INTO `upitt_islandora_audit_page_counts` (`barcode`, `islandora_page_count`) " .
                   "VALUES ('" . upitt_islandora_inventory_audit_html_escape_string($row['barcode']) . "', " .
                   $row['islandora_page_count'] . ")";
     $result = mysqli_query($link, $insert_sql);
@@ -329,18 +335,6 @@ function upitt_islandora_inventory_audit_populate_bigfoot_path() {
       $path = (isset($path_info['dirname']) ? $path_info['dirname'] : '/');
       $fname_only = $path_info['filename'];
 
-      if (strstr($file, 'ulsmanuscripts/31735037971722') <> '') {
-        $path_parts = explode("/", $path);
-        $barcode = (count($path_parts) > 0) ? $path_parts[count($path_parts) - 1] : '';
-        $pseudo_barcode = $barcode . '-' . $fname_only;
-
-        echo "extension : [" . $path_info['extension'] . "]<br>" . 
-             "file = " . $file . "<br>" .
-             $fname_only . "<br>" .
-             $barcode . "<br>" .
-             $pseudo_barcode . "<hr>";
-      }
-
       if (strstr($file, '.mods.xml')/* || strstr($file, '.dc.xml') */) {
         $barcode = str_replace(array($path . '/', '.mods.xml'/*, '.dc.xml'*/),
                 "", $file);
@@ -363,9 +357,6 @@ function upitt_islandora_inventory_audit_populate_bigfoot_path() {
         // a barcode value like 31234567809-0041.
         $upcased_fname = strtoupper($fname_only);
         if (array_search($upcased_fname, $ignore_these_upcased_filenames) === FALSE) {
-          if ((strstr($file, 'ulsmanuscripts/31735037971722') <> '') && ($path_info['extension'] == 'tif')) {
-            echo "<b>ADDED</b><br>";
-          }
           upitt_islandora_inventory_audit_insert('bigfoot', array('bigfoot_path' => $path, 'barcode' => $pseudo_barcode));
         }
       }
@@ -374,8 +365,6 @@ function upitt_islandora_inventory_audit_populate_bigfoot_path() {
   } else {
     drupal_set_message('There was a problem opening the file "' . $files_list_path . '".  No inventory could be determined from the bigfoot location.', 'error');
   }
-  // drupal_set_message('exiting upitt_islandora_inventory_audit_populate_bigfoot_path');
-  die('done');
 }
 
 /**

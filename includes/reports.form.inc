@@ -499,14 +499,12 @@ function upitt_islandora_inventory_audit_get_report_table($table, $exclusive, $p
         $sql_where = 'WHERE ai.barcode IS NULL ';
         $sql_where = str_replace("WHERE ", ($where_add ? $where_add . " AND " : "WHERE "), $sql_where);
         $sql .= 'LEFT JOIN ' . $drupal_database_name . '.upitt_islandora_audit_items_islandora ai ON (ta.barcode = ai.barcode) ' .
-                'JOIN ' . $workflow_database_name . '.item iwi ON (iwi.do_id = ta.barcode) ' .
-                'JOIN ' . $workflow_database_name . '.item_file iwf ON (iwf.item_id = iwi.id AND iwf.`use` = \'MASTER\') ' .
                 $sql_where;
         break;
 
       default:
         $sql .= 'LEFT JOIN ' . $drupal_database_name . '.upitt_islandora_audit_items_islandora ai ON (ta.barcode = ai.barcode) ' .
-                'WHERE ai.barcode IS NULL ';
+                'WHERE ai.barcode IS NULL GROUP BY iwi.id ';
         $sql = str_replace("WHERE ", ($where_add ? $where_add . " AND " : "WHERE "), $sql);
         break;
     }
@@ -523,14 +521,14 @@ function upitt_islandora_inventory_audit_get_report_table($table, $exclusive, $p
     }
     $sql .= $where_add;
   }
-
   // if this is the bigfoot table, the sql must be a UNION
   if ($table == 'bigfoot' && $sql_select) {
     // replace the field in sql_select with an empty string
-    $sql_select = str_replace(', iwf.name', ', \'\'', $sql_select);
-    $sql = $sql .= ' UNION ' . $sql_select . $sql_joins . $sql_where;
+    //    $sql_select = str_replace(', iwf.name', ', \'\'', $sql_select);
+    $sql = $sql . ' UNION ' . $sql_select . $sql_joins . $sql_where;
   }
   $result = db_query($sql);
+
   $result->execute();
   if (!$csv_download) {
     $count = $result->rowCount();
@@ -619,7 +617,7 @@ function upitt_islandora_inventory_audit_get_fields($real_tablename) {
       $return['fields'][] = 'ta.barcode';
       $return['fields'][] = 'ta.bigfoot_path';
       $return['fields'][] = 'ta.in_all_ingests';
-      $return['fields'][] = 'iwf.name';
+      // $return['fields'][] = 'iwf.name';
       $return['integer_fields'] = array('');
       break;
 

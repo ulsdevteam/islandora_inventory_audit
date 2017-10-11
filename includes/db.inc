@@ -442,7 +442,7 @@ function upitt_islandora_inventory_audit_populate_islandora_pid() {
     $offset = 0;
     $total = 0;
     while ($total < $numFound) {
-      $total += upitt_islandora_inventory_audit_populate_achunkof_islandora_pid($offset);
+      $total = upitt_islandora_inventory_audit_populate_achunkof_islandora_pid($offset);
       $offset = $offset + $total;
     }
   }

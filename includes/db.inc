@@ -257,6 +257,9 @@ function upitt_islandora_inventory_audit_populate() {
  * @param array $name_value_pairs
  */
 function upitt_islandora_inventory_audit_insert($table_suffix, $name_value_pairs) {
+  if ($table_suffix == 'islandora') {
+    db_query("DELETE FROM upitt_islandora_audit_items_islandora WHERE islandora_pid = '" . $name_value_pairs['islandora_pid'] . "'")->execute();
+  }
   $id_inserted = db_insert('upitt_islandora_audit_items_' . $table_suffix)
     ->fields($name_value_pairs)
     ->execute();
@@ -266,6 +269,8 @@ function upitt_islandora_inventory_audit_insert($table_suffix, $name_value_pairs
 function upitt_islandora_inventory_audit_insert_islandora_parents($pid, $parents) {
   foreach ($parents as $parent) {
     if (is_object(islandora_object_load($parent))) {
+      db_query("DELETE FROM upitt_islandora_audit_items_parents_islandora WHERE " .
+              "islandora_pid = '" . $pid . "' AND parent_islandora_pid = '" . $parent . "'")->execute();
       db_insert('upitt_islandora_audit_items_parents_islandora')
         ->fields(array(
           'islandora_pid' => $pid,
@@ -436,18 +441,23 @@ function upitt_islandora_inventory_audit_populate_islandora_pid() {
     $tmp = json_decode($search_results->getRawResponse(), TRUE);
 
     $results = array();
-    $numFound = $tmp['response']['numFound'];
-    // repeatedly call this to process this many records each time:
-    //   UPITT_ISLANDORA_INVENTORY_SOLR_CHUNKSIZE
+    // IF the process faults for some reason, and need to restart, remove the two
+    // calls to db_truncate in upitt_islandora_inventory_audit_sync_islandora and set
+    // the initial offset here after determining where to start again.
+    //$offset = 449;
     $offset = 0;
     $total = 0;
+    $numFound = $tmp['response']['numFound'] - $offset;
+    // repeatedly call this to process this many records each time:
+    //   UPITT_ISLANDORA_INVENTORY_SOLR_CHUNKSIZE
     while ($total < $numFound) {
+      error_log('.' . $total);
       $total = upitt_islandora_inventory_audit_populate_achunkof_islandora_pid($offset);
       $offset = $offset + $total;
     }
   }
   catch (Exception $e) {
-    error_log('EXCEPTION in _save_solr_search_session : called from ' . $_SERVER['SERVER_NAME'] .
+    error_log('EXCEPTION in upitt_islandora_inventory_audit_populate_islandora_pid : called from ' . $_SERVER['SERVER_NAME'] .
 ' - ' . $_SERVER['REQUEST_URI'] . '
 ' . print_r($e, true));
   }
@@ -540,7 +550,7 @@ function upitt_islandora_inventory_audit_populate_achunkof_islandora_pid($offset
   }
     
   catch (Exception $e) {
-    error_log('EXCEPTION in _save_solr_search_session : called from ' . $_SERVER['SERVER_NAME'] .
+    error_log('EXCEPTION in upitt_islandora_inventory_audit_populate_achunkof_islandora_pid : called from ' . $_SERVER['SERVER_NAME'] .
 ' - ' . $_SERVER['REQUEST_URI'] . '
 ' . print_r($e, true));
   }

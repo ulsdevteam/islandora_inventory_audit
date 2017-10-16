@@ -39,9 +39,8 @@ function upitt_islandora_inventory_audit_sync_islandora() {
   $very_start_time = upitt_islandora_inventory_audit_microtime_float();
   $time_start = $very_start_time;
 
-  $result = db_truncate('{upitt_islandora_audit_items_parents_islandora}')->execute();
-
-  $result = db_truncate('{upitt_islandora_audit_items_islandora}')->execute();
+  // $result = db_truncate('{upitt_islandora_audit_items_parents_islandora}')->execute();
+  // $result = db_truncate('{upitt_islandora_audit_items_islandora}')->execute();
 
   $time_end = upitt_islandora_inventory_audit_microtime_float();
   $time = $time_end - $time_start;
@@ -139,7 +138,7 @@ function upitt_islandora_inventory_audit_sync_photodb() {
 }
 
 /**
- * This will update the page count values for all book objects from the islandora table -- 
+ * This will update the page count values for all book objects from the islandora table --
  * and gets a matching value from the workflow database by looking at the item_file table.
  */
 function upitt_islandora_inventory_pagecounts($pid = NULL) {
@@ -206,7 +205,7 @@ function upitt_islandora_inventory_pagecounts($pid = NULL) {
 
 
 /**
- * This process will update the "in_all_ingests" field based on whether or not the 
+ * This process will update the "in_all_ingests" field based on whether or not the
  * barcode is in the all_ingests.txt file -- requires a upitt_workflow function call.
  */
 function upitt_islandora_inventory_updatebigfoottable() {
@@ -354,7 +353,7 @@ function upitt_islandora_inventory_audit_populate_bigfoot_path() {
         // For this section, the barcode can come from the filename
         $path_parts = explode("/", $path);
         $barcode = (count($path_parts) > 0) ? $path_parts[count($path_parts) - 1] : '';
-        // Only set this as the barcode if the two parts are not the same... 
+        // Only set this as the barcode if the two parts are not the same...
         $pseudo_barcode = ($barcode <> $fname_only) ? $barcode . '-' . $fname_only : $fname_only;
 
         // shift off the last element (the extension) -- and reimplode to get just the filename portion
@@ -443,8 +442,10 @@ function upitt_islandora_inventory_audit_populate_islandora_pid() {
     $results = array();
     // IF the process faults for some reason, and need to restart, remove the two
     // calls to db_truncate in upitt_islandora_inventory_audit_sync_islandora and set
-    // the initial offset here after determining where to start again.
-    //$offset = 449;
+    // the initial offset here after determining where to start again.  The objects are
+    // pulled from Solr in the order of their PID value, so a newly inserted object would be
+    // starting at the index that is +1 from the previously occuring PID value when
+    // sorted alphabetically by PIDs.
     $offset = 0;
     $total = 0;
     $numFound = $tmp['response']['numFound'] - $offset;
@@ -468,12 +469,12 @@ function upitt_islandora_inventory_audit_populate_islandora_pid() {
 /**
  * Process to update the depositor values for all child objects to all paged_content
  * models.
- * 
+ *
  * DO THIS ALL AT ONCE AFTER THE TWO TABLES ARE CALCULATED - since this is
  * more than 1.5 million records, the JOIN ~ UPDATE statement will run out of memory
  * making a temporary index... so a script was used to update to set the depositor
  * value for the page objects.
- * 
+ *
  */
 function upitt_islandora_inventory_audit_update_depositors() {
   set_time_limit(0);
@@ -515,7 +516,7 @@ function upitt_islandora_inventory_audit_populate_achunkof_islandora_pid($offset
   $query_processor->solrQuery = 'PID:pitt\:*';
   $query_processor->solrStart = $offset;
   $query_processor->solrLimit = UPITT_ISLANDORA_INVENTORY_SOLR_CHUNKSIZE;
-  $query_processor->solrParams = array('fl' => 'PID');
+  $query_processor->solrParams = array('fl' => 'PID', 'sort' => 'PID ASC');
 
   $url = parse_url(variable_get('islandora_solr_url', 'localhost:8080/solr'));
   $solr = new Apache_Solr_Service($url['host'], $url['port'], $url['path'] . '/');
@@ -535,7 +536,7 @@ function upitt_islandora_inventory_audit_populate_achunkof_islandora_pid($offset
         $barcode = substr($pid, strpos($pid, ':') + 1);
         $obj = islandora_object_load($pid);
         $parents = upitt_islandora_inventory_get_parent_values($obj);
-        upitt_islandora_inventory_audit_insert('islandora', array('islandora_pid' => $pid, 
+        upitt_islandora_inventory_audit_insert('islandora', array('islandora_pid' => $pid,
             'barcode' => $barcode,
             'datastreams_latestsize' => $datastream_size_sums['datastreams_latestsize'],
             'datastreams_totalsize' => $datastream_size_sums['datastreams_totalsize'],
@@ -545,10 +546,11 @@ function upitt_islandora_inventory_audit_populate_achunkof_islandora_pid($offset
         // add records for the object to parent relationhips
         upitt_islandora_inventory_audit_insert_islandora_parents($pid, $parents);
         $numAdded++;
+        error_log('inventory #' . ($offset + $numAdded));
       }
     }
   }
-    
+
   catch (Exception $e) {
     error_log('EXCEPTION in upitt_islandora_inventory_audit_populate_achunkof_islandora_pid : called from ' . $_SERVER['SERVER_NAME'] .
 ' - ' . $_SERVER['REQUEST_URI'] . '

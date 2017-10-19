@@ -637,8 +637,8 @@ function upitt_islandora_inventory_audit_get_fields($real_tablename) {
       break;
 
     case 'upitt_islandora_audit_items_equinox':
-      $return['fields'][] = 'barcode';
-      $return['fields'][] = 'equinox_path';
+      $return['fields'][] = 'ta.barcode';
+      $return['fields'][] = 'type';
       $return['integer_fields'] = array();
       break;
 

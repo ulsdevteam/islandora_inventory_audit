@@ -166,26 +166,23 @@ function upitt_islandora_inventory_audit_schema() {
         'unsigned' => TRUE,
         'not null' => TRUE,
       ),
-      'equinox_path' => array(
-        'description' => 'Timestamp for record update',
+      'type' => array(
+        'description' => 'the type of resource',
         'type' => 'varchar',
-        'length' => 255,
+        'length' => 50,
         'not null' => FALSE,
       ),
       'barcode' => array(
         'description' => 'the barcode corresponding to the files',
         'type' => 'varchar',
-        'length' => 255,
+        'length' => 50,
         'not null' => FALSE,
       ),
     ),
     'indexes' => array(
-      'ss_equinox_path' => array('equinox_path'),
+      'ss_type' => array('type'),
       'ss_barcode' => array('barcode'),
     ),
-/*    'unique keys' => array(
-      'u_equinox_path' => array('equinox_path'),
-    ), */
     'primary key' => array('id'),
   );
 

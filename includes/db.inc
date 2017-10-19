@@ -23,6 +23,7 @@ function upitt_islandora_inventory_audit_get_record_by_pid($pid) {
                     'FROM {upitt_islandora_audit_items_islandora} ai ' .
                     'LEFT JOIN {upitt_islandora_audit_items_workflow_record} aw ON (aw.barcode = ai.barcode) ' .
                     'LEFT JOIN {upitt_islandora_audit_items_bigfoot} ab ON (ab.barcode = ai.barcode) ' .
+                    'LEFT JOIN {upitt_islandora_audit_items_equinox} ae ON (ae.barcode = ai.barcode) ' .
                     'LEFT JOIN {upitt_islandora_audit_items_photodb} ap ON (ap.barcode = ai.barcode) ' .
                     'WHERE ai.barcode = \'' . upitt_islandora_inventory_audit_html_escape_string($barcode) . '\'');
 
@@ -528,9 +529,12 @@ function upitt_islandora_inventory_audit_populate_achunkof_islandora_pid($offset
     $results = array();
     $numAdded = 0;
     $numFound = $tmp['response']['numFound'];
+    $pids = upitt_islandora_inventory_audit_missedpids();
     if ($tmp['response']['numFound'] > 0) {
-      foreach ($tmp['response']['docs'] as $k=>$rec) {
-        $pid = $rec['PID'];
+      foreach ($pids as $pid) {
+        $pid = trim($pid);
+//      foreach ($tmp['response']['docs'] as $k=>$rec) {
+//        $pid = $rec['PID'];
         $datastream_sizes = upitt_workflow_get_depositor_model_and_datastreams_sizes($pid);
         $datastream_size_sums = upitt_workflow_sum_datastream_sizes($datastream_sizes);
         $barcode = substr($pid, strpos($pid, ':') + 1);
@@ -546,11 +550,9 @@ function upitt_islandora_inventory_audit_populate_achunkof_islandora_pid($offset
         // add records for the object to parent relationhips
         upitt_islandora_inventory_audit_insert_islandora_parents($pid, $parents);
         $numAdded++;
-        error_log('inventory #' . ($offset + $numAdded));
       }
     }
   }
-
   catch (Exception $e) {
     error_log('EXCEPTION in upitt_islandora_inventory_audit_populate_achunkof_islandora_pid : called from ' . $_SERVER['SERVER_NAME'] .
 ' - ' . $_SERVER['REQUEST_URI'] . '
@@ -572,6 +574,10 @@ function upitt_islandora_inventory_all_record_counts() {
             ->fields('ab')
             ->execute();
   $num_of_upitt_islandora_audit_items_bigfoot = $results->rowCount();
+  $results = db_select('upitt_islandora_audit_items_equinox', 'ae')
+            ->fields('ae')
+            ->execute();
+  $num_of_upitt_islandora_audit_items_equinox = $results->rowCount();
   $results = db_select('upitt_islandora_audit_items_photodb', 'ab')
             ->fields('ab')
             ->execute();
@@ -580,5 +586,10 @@ function upitt_islandora_inventory_all_record_counts() {
       'upitt_islandora_audit_items_workflow_record' => $num_of_upitt_islandora_audit_items_workflow_record,
       'upitt_islandora_audit_items_bigfoot' => $num_of_upitt_islandora_audit_items_bigfoot,
       'upitt_islandora_audit_items_photodb' => $num_of_upitt_islandora_audit_items_photodb,
+      'upitt_islandora_audit_items_equinox' => $num_of_upitt_islandora_audit_items_equinox,
       );
+}
+
+function upitt_islandora_inventory_audit_missedpids() {
+  return array();
 }

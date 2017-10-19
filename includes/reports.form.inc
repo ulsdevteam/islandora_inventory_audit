@@ -55,6 +55,14 @@ function upitt_islandora_inventory_audit_reports_form() {
         l('Bigfoot inventory that is NOT in Islandora','/admin/islandora/inventory_audit/reports/bigfoot/exclusive') . "<br>" .
         '<a href="/admin/islandora/inventory_audit/reports/bigfoot/exclusive?in_all_ingests=1">' . t('Bigfoot inventory DLXS! that is NOT in Islandora') . "</a>",
     ),
+    'equinox' => array(
+      '#type' => 'fieldset',
+      '#title' => number_format($inventory_record_counts['upitt_islandora_audit_items_equinox']) . ' equinox object files',
+      '#description' => l('Equinox inventory','/admin/islandora/inventory_audit/reports/equinox/all') .
+        " (" . number_format($inventory_record_counts['upitt_islandora_audit_items_equinox']) . " files)<br>" .
+        l('Equinox inventory that is NOT in Islandora','/admin/islandora/inventory_audit/reports/equinox/exclusive') . "<br>" .
+        '<a href="/admin/islandora/inventory_audit/reports/equinox/exclusive?in_all_ingests=1">' . t('Equinox inventory DLXS! that is NOT in Islandora') . "</a>",
+    ),
     'photodb' => array(
       '#type' => 'fieldset',
       '#title' => 'photodb objects',
@@ -488,12 +496,14 @@ function upitt_islandora_inventory_audit_get_report_table($table, $exclusive, $p
     switch ($table) {
       case 'islandora':
         $sql .= 'LEFT JOIN upitt_islandora_audit_items_bigfoot ab ON (ta.barcode = ab.barcode) ' .
+                'LEFT JOIN upitt_islandora_audit_items_equinox ae ON (ta.barcode = ae.barcode) ' .
                 'LEFT JOIN upitt_islandora_audit_items_workflow_record aw ON (ta.barcode = aw.barcode) ' .
                 'LEFT JOIN upitt_islandora_audit_items_photodb ap ON (ta.barcode = ap.barcode) ' .
                 'WHERE ab.barcode IS NULL AND aw.barcode IS NULL ';
         $sql = str_replace("WHERE ", ($where_add ? $where_add . " AND " : "WHERE "), $sql);
         break;
       case 'bigfoot':
+      case 'equinox':
         $sql_select = $sql;
         $sql_joins = 'LEFT JOIN ' . $drupal_database_name . '.upitt_islandora_audit_items_islandora ai ON (ta.barcode = ai.barcode) ';
         $sql_where = 'WHERE ai.barcode IS NULL ';
@@ -511,7 +521,7 @@ function upitt_islandora_inventory_audit_get_report_table($table, $exclusive, $p
   }
   else {
     $csv_name[] = 'all';
-    if ($table == 'bigfoot') {
+    if ($table == 'bigfoot' || $table == 'equinox') {
       $sql_select = $sql;
       $sql_joins = 'LEFT JOIN ' . $drupal_database_name . '.upitt_islandora_audit_items_islandora ai ON (ta.barcode = ai.barcode) ';
       $sql .= $sql_joins .
@@ -522,7 +532,7 @@ function upitt_islandora_inventory_audit_get_report_table($table, $exclusive, $p
     $sql .= $where_add;
   }
   // if this is the bigfoot table, the sql must be a UNION
-  if ($table == 'bigfoot' && $sql_select) {
+  if (($table == 'bigfoot' || $table == 'equinox') && $sql_select) {
     // replace the field in sql_select with an empty string
     //    $sql_select = str_replace(', iwf.name', ', \'\'', $sql_select);
     $sql = $sql . ' UNION ' . $sql_select . $sql_joins . $sql_where;
@@ -623,6 +633,12 @@ function upitt_islandora_inventory_audit_get_fields($real_tablename) {
 
     case 'upitt_islandora_audit_items_workflow_record':
       $return['fields'][] = 'ta.barcode';
+      $return['integer_fields'] = array();
+      break;
+
+    case 'upitt_islandora_audit_items_equinox':
+      $return['fields'][] = 'barcode';
+      $return['fields'][] = 'equinox_path';
       $return['integer_fields'] = array();
       break;
 

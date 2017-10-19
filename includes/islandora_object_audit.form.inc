@@ -49,6 +49,8 @@ function upitt_islandora_inventory_audit_form(array $form, array &$form_state, A
     '</p>' .
     '<p><span class="format_label' . ((empty($audit_record['bigfoot_path'])) ? ' error' : '') .
           '">on bigfoot?</span>' . ((empty($audit_record['bigfoot_path'])) ? 'No' : 'Yes | ' . $audit_record['bigfoot_path']) .
+    '<p><span class="format_label' . ((empty($audit_record['type'])) ? ' error' : '') .
+          '">on equinox?</span>' . ((empty($audit_record['type'])) ? 'No' : 'Yes | ' . $audit_record['type']) .
     '<p><span class="format_label' . ((empty($audit_record['photodb_identifier'])) ? ' error' : '') .
           '">in PhotoDB?</span>' . ((empty($audit_record['photodb_identifier'])) ? 'No' : 'Yes | ' . $audit_record['photodb_identifier']) .
     '</p>' .

@@ -7,7 +7,7 @@
 
         var data = google.visualization.arrayToDataTable([
           ['Depositor', 'Total Size'],
-<?php $last_depositor = is_array($depositor_rows) && isset($depositor_rows[count($depositor_rows)]) ? $depositor_rows[count($depositor_rows)] : ''; ?>
+<?php $last_depositor = is_array($depositor_rows) && isset($depositor_rows[count($depositor_rows)-1]) ? $depositor_rows[count($depositor_rows)-1] : ''; ?>
 
 <?php foreach ($depositors_rows as $k => $row): ?>
           [<?php print "'" . $row['depositor'] . "', " . $row['total']; ?>]<?php print ($row['depositor'] <> $last_depositor) ? ',' : ''; ?>

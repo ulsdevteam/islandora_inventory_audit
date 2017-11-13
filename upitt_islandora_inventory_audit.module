@@ -79,6 +79,9 @@ function upitt_islandora_inventory_audit_preprocess_page(&$vars) {
       drupal_add_css($path . '/css/audit_details.css');
       $vars['page']['sidebar'] = array();
     }
+    if ($item['path'] == 'admin/islandora/inventory_audit/reports/%/%') {
+      drupal_add_js('https://www.gstatic.com/charts/loader.js');
+    }
   }
 }
 
@@ -93,5 +96,10 @@ function upitt_islandora_inventory_audit_theme() {
           'table_markup' => '', 'report_detail' => ''),
       'template' => 'theme/upitt-islandora-inventory-audit-report',
     ),
+    'upitt_islandora_inventory_audit_depositors_chart' => array(
+      'variables' => array('depositors_rows' => NULL),
+      'template' => 'theme/upitt-islandora-inventory-audit-depositors-chart',
+    ),
+
   );
 }

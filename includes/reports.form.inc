@@ -127,7 +127,6 @@ function upitt_islandora_inventory_audit_reports_report($table, $exclusive_strin
   // Build table from records and theme it for output.
   $table_markup = theme('table', array('header' => $report['header'],
     'rows' => $report['rows']));
-
   switch ($table) {
     case 'workflow_records':
       $human_readable_table = 'Workflow Records';
@@ -216,6 +215,26 @@ function upitt_islandora_inventory_audit_reports_report($table, $exclusive_strin
     //
     // If the table is islandora, expose model and depositor.
     $filter_controls = drupal_render($filter_controls_form);
+  }
+
+  $depositors_rows = array();
+  foreach ($report['rows'] as $k => $row) {
+    $depositor = isset($row['depositor']) ? $row['depositor'] : '';
+    @list($depositor, $junk) = explode("<br>", $depositor);
+    if ($depositor == '' || $depositor == 'University of Pittsburgh') {}
+    else {
+      $data = isset($row['datastreams total size']['data']) ? $row['datastreams total size']['data'] : 0;
+      @list($junk, $keep) = explode("<br>", $data);
+      $data = str_replace(array(",", " bytes"), "", strip_tags($keep));
+      $depositors_rows[] = array(
+          'depositor' => $depositor,
+          'total' => $data,
+        );
+    }
+  }
+
+  if ($exclusive_string == 'dsfs_by_depositor') {
+    $table_markup = $table_markup . theme('upitt_islandora_inventory_audit_depositors_chart', array('depositors_rows' => $depositors_rows));
   }
 
   $markup = theme('upitt_islandora_inventory_audit_report',
@@ -328,7 +347,13 @@ function upitt_islandora_inventory_audit_get_datastreamfilesize_report($sort, $o
     exit;
   }
   else {
-    return array('count' => $count, 'header' => $header, 'rows' => $rows, 'pager' => '', 'total_object_count' => $total_object_count, 'report_detail' => '');
+    return array(
+      'count' => $count, 
+      'header' => $header, 
+      'rows' => $rows, 
+      'pager' => '', 
+      'total_object_count' => $total_object_count, 
+      'report_detail' => '');
   }
 }
 

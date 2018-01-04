@@ -340,7 +340,7 @@ function upitt_islandora_inventory_audit_get_datastreamfilesize_report($sort, $o
     foreach ($rows as $row) {
       $use_row = array();
       foreach ($row as $i => $cell) {
-        $use_row[$i] = '"' . strip_tags(isset($cell['data']) ? str_replace("<br>", " ", $cell['data']) : $cell) . '"';
+        $use_row[$i] = '"' . strip_tags((is_array($cell) && isset($cell['data'])) ? str_replace("<br>", " ", $cell['data']) : $cell) . '"';
       }
       print implode(",", $use_row) . "\n";
     }

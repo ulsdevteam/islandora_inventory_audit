@@ -553,6 +553,7 @@ function upitt_islandora_inventory_audit_populate_achunkof_islandora_pid($offset
               'datastreams_totalsize' => $datastream_size_sums['datastreams_totalsize'],
               'fedora_model' => (array_key_exists('RELS_EXT_hasModel_uri_s', $datastream_sizes) === TRUE) ? str_replace('info:fedora/islandora:', '', $datastream_sizes['RELS_EXT_hasModel_uri_s']) : '',
               'depositor' => isset($datastream_sizes['mods_name_depositor_namePart_s']) ? $datastream_sizes['mods_name_depositor_namePart_s'] : '',
+              'create_dt' => isset($datastream_sizes['fgs_createdDate_dt']) ? str_replace(array("T", "Z"), array(" ", ""), $datastream_sizes['fgs_createdDate_dt']) : '',
               ));
           // add records for the object to parent relationhips
           upitt_islandora_inventory_audit_insert_islandora_parents($pid, $parents);

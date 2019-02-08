@@ -91,9 +91,17 @@ function upitt_islandora_inventory_audit_preprocess_page(&$vars) {
 function upitt_islandora_inventory_audit_theme() {
   return array(
     'upitt_islandora_inventory_audit_report' => array(
-      'variables' => array('table' => NULL, 'filter_controls' => '', 'get_from_uri' => '',
-          'count_rows' => '', 'csv_download_link' => '', 'pager' => '', 'total_object_count' => '',
-          'table_markup' => '', 'report_detail' => ''),
+      'variables' => array(
+          'table' => NULL,
+          'filter_controls' => '',
+          'year_links' => array(),
+          'get_from_uri' => '',
+          'count_rows' => '',
+          'csv_download_link' => '',
+          'pager' => '',
+          'total_object_count' => '',
+          'table_markup' => '',
+          'report_detail' => ''),
       'template' => 'theme/upitt-islandora-inventory-audit-report',
     ),
     'upitt_islandora_inventory_audit_depositors_chart' => array(

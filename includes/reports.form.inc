@@ -93,6 +93,7 @@ function upitt_islandora_inventory_audit_reports_report($table, $exclusive_strin
   $model = filter_input(INPUT_GET, 'REQUEST_URI');
   $order = filter_input(INPUT_GET, 'order');
   $sort = filter_input(INPUT_GET, 'sort');
+  $year = filter_input(INPUT_GET, 'year');
   $in_all_ingests = filter_input(INPUT_GET, 'in_all_ingests');
   $csv_download = filter_input(INPUT_GET, 'csv');
 
@@ -101,10 +102,17 @@ function upitt_islandora_inventory_audit_reports_report($table, $exclusive_strin
   if ($depositor) { $filters['ta.depositor'] = $depositor; }
   if ($model) { $filters['ta.fedora_model'] = $model; }
   if ($in_all_ingests > -1 && $in_all_ingests < 2) { $filters['ta.in_all_ingests'] = $in_all_ingests; }
+  $request_uri = filter_input(INPUT_SERVER, 'REQUEST_URI');
+  $get_from_uri = (strstr($request_uri, '?') ?
+        substr($request_uri, 0, strpos($request_uri, '?'))
+          : $request_uri);
+
   // Get records -- based on the offset - considering pagination.
+  $year_links = array();
   switch ($exclusive_string) {
     case 'dsfs_by_depositor':
-      $report = upitt_islandora_inventory_audit_get_datastreamfilesize_report($sort, $order, $csv_download);
+      $report = upitt_islandora_inventory_audit_get_datastreamfilesize_report($sort, $order, $year, $csv_download);
+      $year_links = upitt_islandora_inventory_audit_get_data_years($get_from_uri . '?' . $_SERVER['QUERY_STRING'] . '&');
       break;
 
     case 'page_detail':
@@ -136,11 +144,6 @@ function upitt_islandora_inventory_audit_reports_report($table, $exclusive_strin
       $human_readable_table = ucwords($table);
     break;
   }
-
-  $request_uri = filter_input(INPUT_SERVER, 'REQUEST_URI');
-  $get_from_uri = (strstr($request_uri, '?') ?
-        substr($request_uri, 0, strpos($request_uri, '?'))
-          : $request_uri);
 
   $csv_download_link = $get_from_uri . '?' . $_SERVER['QUERY_STRING'] . '&csv=1';
   if ($exclusive_string == 'page_detail') {
@@ -238,13 +241,40 @@ function upitt_islandora_inventory_audit_reports_report($table, $exclusive_strin
   }
 
   $markup = theme('upitt_islandora_inventory_audit_report',
-      array('title' => $human_readable_table, 'filter_controls' => $filter_controls,
-        'pager' => $report['pager'], 'get_from_uri' => $get_from_uri,
-        'table_markup' => $table_markup, 'count_rows' => $count_rows, 'csv_download_link' => $csv_download_link,
+      array('title' => $human_readable_table,
+        'filter_controls' => $filter_controls,
+        'year_links' => $year_links,
+        'pager' => $report['pager'],
+        'get_from_uri' => $get_from_uri,
+        'table_markup' => $table_markup, 
+        'count_rows' => $count_rows,
+        'csv_download_link' => $csv_download_link,
         'total_object_count' => $report['total_object_count'],
         'report_detail' => $report['report_detail']));
 
   return $markup;
+}
+
+function upitt_islandora_inventory_audit_get_data_years($link_prefix) {
+  $min_year = 2017;
+  $get_year = (isset($_GET['year']) ? $_GET['year'] : '');
+  $links = array();
+  // Get the total datastream filesize
+  $result = db_query("SELECT YEAR(MIN(create_dt)) `min_year` FROM upitt_islandora_audit_items_islandora");
+  $result->execute();
+  if ($result->rowCount()) {
+    $row = $result->fetchAssoc();
+    $min_year = $row['min_year'];
+  }
+  $this_year = date('Y');
+  dpm($this_year);
+  dpm($min_year);
+  for ($year = $min_year; $year <= $this_year; $year++) {
+    $links[$year] = ($year == $get_year) ?
+      '<b>' . $year . '</b>' :
+      '<a href="' . $link_prefix . 'year=' . $year . '">' . $year . '</a>';
+  }
+  return $links;
 }
 
 /**
@@ -254,7 +284,7 @@ function upitt_islandora_inventory_audit_reports_report($table, $exclusive_strin
  * @param string $order  field name to be sorted upon
  * @return associative array of table info that can be themed to output HTML of table.
  */
-function upitt_islandora_inventory_audit_get_datastreamfilesize_report($sort, $order, $csv_download = 0) {
+function upitt_islandora_inventory_audit_get_datastreamfilesize_report($sort, $order, $year, $csv_download = 0) {
   $order = str_replace('% ', 'pct ', $order);
   module_load_include('inc', 'islandora', 'includes/utilities');
 
@@ -287,6 +317,7 @@ function upitt_islandora_inventory_audit_get_datastreamfilesize_report($sort, $o
          "ROUND((SUM(datastreams_totalsize) - SUM(datastreams_latestsize)) / SUM(datastreams_totalsize) * 100, 4) `pct of depositor due to \"extra\" versions`, " .
          "ROUND((SUM(datastreams_totalsize) - SUM(datastreams_latestsize)) / " . $total_size . " * 100, 4) `pct of total \"extra\" size` " .
          "FROM upitt_islandora_audit_items_islandora ai " .
+         ($year ? "WHERE create_dt BETWEEN '" . ($year - 1) . "-12-31 23:59.59' AND '" . ($year + 1) . "-01-01 00:00:00' " : "") .
          "GROUP BY ai.depositor " .
          ($order ? "ORDER BY `" . $order . "` " .$sort : '');
 
@@ -329,7 +360,8 @@ function upitt_islandora_inventory_audit_get_datastreamfilesize_report($sort, $o
   }
   if ($csv_download) {
     header("Content-type: text/csv");
-    header("Content-Disposition: attachment; filename=datastream_filesize_report.csv");
+    header("Content-Disposition: attachment; filename=datastream_filesize_report" .
+        ($year ? "_" . $year : "") . ".csv");
     header("Pragma: no-cache");
     header("Expires: 0");
     $use_header = array();

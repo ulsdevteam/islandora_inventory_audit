@@ -44,6 +44,11 @@ function upitt_islandora_inventory_audit_schema() {
         'length' => 255,
         'not null' => TRUE,
       ),
+      'create_dt' => array(
+        'description' => 'The fedora create date for the object',
+        'type' => 'int',
+        'not null' => FALSE,
+      ),
       'datastreams_latestsize' => array(
         'description' => 'Total size of the latest version for all datastreams',
         'type' => 'int',
@@ -68,6 +73,7 @@ function upitt_islandora_inventory_audit_schema() {
       'ss_barcode' => array('barcode'),
       'ss_fedora_model' => array('fedora_model'),
       'ss_depositor' => array('depositor'),
+      'ss_create_dt' => array('create_dt'),
     ),
     'unique keys' => array(
       'u_islandora_pid' => array('islandora_pid'),

@@ -2,6 +2,9 @@
   <a href="<?php print $csv_download_link; ?>">Download CSV</a><br />
 <?php endif; ?>
 <h3><?php print $title; ?></h3>
+<?php if (is_array($year_links) && count($year_links > 0)): ?>
+ <p>View data by the year: <?php print implode(" | ", $year_links); ?></p>
+<?php endif; ?>
 
 <?php if ($report_detail) { print $report_detail; } ?>
 

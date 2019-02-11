@@ -276,6 +276,10 @@ function upitt_islandora_inventory_audit_get_data_years($link_prefix) {
       '<b>' . $year . '</b>' :
       '<a href="' . $link_prefix . 'year=' . $year . '">' . $year . '</a>';
   }
+  if (count($links) > 0) {
+    $links['all'] = ($get_year == '') ? '<b>All</b>' :
+      '<a href="' . $link_prefix . '">All</a>';
+  }
   return $links;
 }
 

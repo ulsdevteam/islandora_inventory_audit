@@ -309,6 +309,7 @@ function upitt_islandora_inventory_audit_get_datastreamfilesize_report($sort, $o
   else {
     $total_size = 1;
   }
+  if (!$total_size || $total_size == '') { $total_size = 1; }
 
   $sql = "SELECT depositor, count(depositor) `depositors count`, SUM(datastreams_latestsize) `datastreams latest size`, " .
          "SUM(datastreams_totalsize) `datastreams total size`, " .

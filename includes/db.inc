@@ -547,14 +547,17 @@ function upitt_islandora_inventory_audit_populate_achunkof_islandora_pid($offset
         $obj = islandora_object_load($pid);
         if (is_object($obj)) {
           $parents = upitt_islandora_inventory_get_parent_values($obj);
-          upitt_islandora_inventory_audit_insert('islandora', array('islandora_pid' => $pid,
+          $name_value_pairs = array('islandora_pid' => $pid,
               'barcode' => $barcode,
               'datastreams_latestsize' => $datastream_size_sums['datastreams_latestsize'],
               'datastreams_totalsize' => $datastream_size_sums['datastreams_totalsize'],
               'fedora_model' => (array_key_exists('RELS_EXT_hasModel_uri_s', $datastream_sizes) === TRUE) ? str_replace('info:fedora/islandora:', '', $datastream_sizes['RELS_EXT_hasModel_uri_s']) : '',
               'depositor' => isset($datastream_sizes['mods_name_depositor_namePart_s']) ? $datastream_sizes['mods_name_depositor_namePart_s'] : '',
-              'create_dt' => isset($datastream_sizes['fgs_createdDate_dt']) ? str_replace(array("T", "Z"), array(" ", ""), $datastream_sizes['fgs_createdDate_dt']) : '',
-              ));
+              );
+          if (isset($datastream_sizes['fgs_createdDate_dt'])) {
+            $name_value_pairs['create_dt'] = str_replace(array("T", "Z"), array(" ", ""), $datastream_sizes['fgs_createdDate_dt']);
+          }
+          upitt_islandora_inventory_audit_insert('islandora', $name_value_pairs);
           // add records for the object to parent relationhips
           upitt_islandora_inventory_audit_insert_islandora_parents($pid, $parents);
         }

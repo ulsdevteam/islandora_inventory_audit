@@ -112,7 +112,8 @@ function upitt_islandora_inventory_audit_reports_report($table, $exclusive_strin
   switch ($exclusive_string) {
     case 'dsfs_by_depositor':
       $report = upitt_islandora_inventory_audit_get_datastreamfilesize_report($sort, $order, $year, $csv_download);
-      $year_links = upitt_islandora_inventory_audit_get_data_years($get_from_uri . '?' . $_SERVER['QUERY_STRING'] . '&');
+      $query_string_removed_year = upitt_islandora_inventory_remove_param($_SERVER['QUERY_STRING'], 'year');
+      $year_links = upitt_islandora_inventory_audit_get_data_years($get_from_uri . '?' . $query_string_removed_year . '&');
       break;
 
     case 'page_detail':
@@ -267,8 +268,9 @@ function upitt_islandora_inventory_audit_get_data_years($link_prefix) {
     $min_year = $row['min_year'];
   }
   $this_year = date('Y');
-  dpm($this_year);
-  dpm($min_year);
+  if (!$min_year || $min_year == '') {
+    $min_year = $this_year;
+  }
   for ($year = $min_year; $year <= $this_year; $year++) {
     $links[$year] = ($year == $get_year) ?
       '<b>' . $year . '</b>' :
@@ -709,4 +711,32 @@ function upitt_islandora_inventory_audit_get_fields($real_tablename) {
       break;
   }
   return $return;
+}
+
+/**
+ * Removes a specified $param from a $params string value.
+ * 
+ * Each of the param values are paired with name=value such as:
+ *   param1=val1&param2=val2&param3=val3.
+ *
+ * @param string $params
+ *   The params - comes from $_SERVER['QUERY_STRING']
+ * @param string $param
+ *   The name of the parameter to remove from the provided $params string.
+ * @return type
+ */
+function upitt_islandora_inventory_remove_param($params, $param) {
+  $params_arr = explode("&", $params);
+  $ret_arr = array();
+  $look_for = $param . '=';
+  $look_for_len = strlen($look_for);
+  foreach ($params_arr as $param_name_eq_value) {
+    $param_name_eq_value = trim($param_name_eq_value);
+    if ($param_name_eq_value) {
+      if (!(substr($param_name_eq_value, 0, $look_for_len) == $look_for)) {
+        $ret_arr[] = $param_name_eq_value;
+      }
+    }
+  }
+  return implode("&", $ret_arr);
 }

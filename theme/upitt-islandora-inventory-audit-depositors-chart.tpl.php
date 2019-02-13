@@ -16,6 +16,7 @@
 
         var options = {
           title: 'Depositor Size - (ignoring "University of Pittsburgh" content)',
+          sliceVisibilityThreshold: .000001,
           fontSize: 11,
           is3D: true,
         };

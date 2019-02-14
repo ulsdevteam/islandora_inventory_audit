@@ -1,4 +1,4 @@
-<div id="piechart" style="width: 1100px; height: 580px;"></div>
+<div id="piechart" style="width: 1100px; height: 730px;"></div>
     <script type="text/javascript">
       google.charts.load('current', {'packages':['corechart']});
       google.charts.setOnLoadCallback(drawChart);
@@ -16,7 +16,7 @@
 
         var options = {
           title: 'Depositor Size - (ignoring "University of Pittsburgh" content)',
-          sliceVisibilityThreshold: .000001,
+          sliceVisibilityThreshold: .000000052,
           fontSize: 11,
           is3D: true,
         };

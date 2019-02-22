@@ -349,7 +349,18 @@ function upitt_islandora_inventory_audit_get_datastreamfilesize_report($sort, $o
         $record[$fieldname] = array('data' => $value, 'class' => array('pct_fields')) ;
       }
     }
-    $record['depositor'] = $record['depositor'] . '<br><span class="raw_integer">' . number_format($record['depositors count']) . ' object' . ($record['depositors count'] == 1 ? '' : 's') . '</span>';
+    $depositor_link = l(
+      number_format($record['depositors count']) . ' object' . ($record['depositors count'] == 1 ? '' : 's'), 
+      'islandora/search', array(
+        'attributes' => array(
+          'target' => 'blank'
+        ),
+        'query' => array(
+            'islandora_solr_search_navigation' => '0',
+            'f[0]'=> 'mods_name_depositor_namePart_ms:"' . $record['depositor'] . '"',
+          )));
+    $record['depositor'] = $record['depositor'] . '<br>' .
+      '<span class="raw_integer">' . $depositor_link . '</span>';
     $total_object_count += $record['depositors count'];
     unset($record['depositors count']);
     $rows[] = $record;

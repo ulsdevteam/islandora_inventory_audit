@@ -34,6 +34,15 @@ function upitt_islandora_inventory_audit_menu() {
       'file' => 'includes/reports.form.inc',
       'access arguments' => array(UPITT_ISLANDORA_INVENTORY_AUDIT),
     ),
+    'admin/reports/islandora/inventory_audit/dsfs' => array(
+      'title' => 'Islandora Datastream File Size by Depositor',
+      'description' => 'Islandora Datastream File Size by Depositor',
+      'page callback' => 'upitt_islandora_inventory_audit_reports_report',
+      'page arguments' => array('islandora', 'dsfs_by_depositor'),
+      'file' => 'includes/reports.form.inc',
+      'type' => MENU_NORMAL_ITEM,
+      'access arguments' => array(UPITT_ISLANDORA_INVENTORY_AUDIT),
+    ),
     // report handler
     'admin/islandora/inventory_audit/reports/%/%' => array(
       'page callback' => 'upitt_islandora_inventory_audit_reports_report',

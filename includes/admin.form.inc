@@ -39,6 +39,30 @@ function upitt_islandora_inventory_audit_admin_form() {
         '#default_value' => variable_get('upitt_islandora_inventory_audit_photodb_export')
       ),
     ),
+    'frame2' => array(
+      '#type' => 'fieldset',
+      '#title' => t('Islandora inventory options'),
+      'islandora_offset' => array(
+        '#type' => 'textfield',
+        '#title' => t('Starting offset'),
+        '#description' => t('This will cause the inventory process to resume ' .
+            'at a specific index.  This can be any unsigned integer value.'),
+        '#default_value' => variable_get('upitt_islandora_inventory_audit_islandora_offset', '0'),
+      ),
+      'islandora_start_date' => array(
+        '#type' => 'textfield',
+        '#title' => t('Starting date for inventory process'),
+        '#description' => t('This date value must be in ISO 8601 format and is ' .
+            'used in the Solr query to limit results of the inventory process ' .
+            'to all items created after that specific date - the resulting ' .
+            'format of the Solr query would have <code>&fq=fgs_createdDate_dt' .
+            ':[<b>2013-07-17T00:00:00Z</b> TO NOW]</code>.'),
+        '#attributes' => array(
+            'placeholder' => '2013-07-17T00:00:00Z',
+        ),
+        '#default_value' => variable_get('upitt_islandora_inventory_audit_islandora_start_date', ''),
+      ),
+    ),
     'submit' => array(
       '#type' => 'submit',
       '#value' => t('Save Configuration'),
@@ -112,8 +136,10 @@ function upitt_islandora_inventory_audit_admin_form_submit(array $form, array &$
     case 'edit-submit':
       variable_set('upitt_islandora_inventory_audit_bigfoot_files_mapped_path', $form_state['values']['bigfoot_mapped_path']);
       variable_set('upitt_islandora_inventory_audit_photodb_export', $form_state['values']['photodb_export']);
+      variable_set('upitt_islandora_inventory_audit_islandora_start_date', $form_state['values']['islandora_start_date']);
+      variable_set('upitt_islandora_inventory_audit_islandora_offset', intval($form_state['values']['islandora_offset'] + 0));
       drupal_set_message('Settings updated');
-      drupal_goto('/admin/islandora');
+      drupal_goto('/admin/islandora/inventory_audit');
       break;
 
     case 'edit-sync-islandora':
@@ -151,6 +177,8 @@ function upitt_islandora_inventory_audit_admin_form_submit(array $form, array &$
     case 'edit-reset':
       variable_del('upitt_islandora_inventory_audit_bigfoot_files_mapped_path');
       variable_del('upitt_islandora_inventory_audit_photodb_export');
+      variable_del('upitt_islandora_inventory_audit_islandora_start_date');
+      variable_del('upitt_islandora_inventory_audit_islandora_offset');
       break;
   }
 }

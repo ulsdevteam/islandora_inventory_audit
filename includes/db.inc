@@ -431,6 +431,8 @@ function upitt_islandora_inventory_audit_populate_islandora_pid() {
   module_load_include('inc', 'islandora_solr', 'includes/utilities');
   $query_processor = new IslandoraSolrQueryProcessor();
 
+  $use_offset = intval(variable_get('upitt_islandora_inventory_audit_islandora_offset', '0') + 0);
+
   $ret_arr = array();
   // run two queries --
   // 1) to get the datastreams available on this object
@@ -438,6 +440,11 @@ function upitt_islandora_inventory_audit_populate_islandora_pid() {
   $query_processor->solrStart = 0;
   $query_processor->solrLimit = 0;
   $query_processor->solrParams = array('fl' => 'PID');
+  $starting_date_filter = (variable_get('upitt_islandora_inventory_audit_islandora_start_date', '')) ?
+      '[' . variable_get('upitt_islandora_inventory_audit_islandora_start_date', '') . ' TO NOW]' : '';
+  if ($starting_date_filter) {
+    $query_processor->solrParams['fq'] = 'fgs_createdDate_dt:' . $starting_date_filter;
+  }
 
   $url = parse_url(variable_get('islandora_solr_url', 'localhost:8080/solr'));
   $solr = new Apache_Solr_Service($url['host'], $url['port'], $url['path'] . '/');
@@ -445,7 +452,6 @@ function upitt_islandora_inventory_audit_populate_islandora_pid() {
   try {
     $search_results = $solr->search($query_processor->solrQuery, $query_processor->solrStart, $query_processor->solrLimit, $query_processor->solrParams, 'GET');
     $tmp = json_decode($search_results->getRawResponse(), TRUE);
-
     $results = array();
     // IF the process faults for some reason, and need to restart, remove the two
     // calls to db_truncate in upitt_islandora_inventory_audit_sync_islandora and set
@@ -453,7 +459,7 @@ function upitt_islandora_inventory_audit_populate_islandora_pid() {
     // pulled from Solr in the order of their PID value, so a newly inserted object would be
     // starting at the index that is +1 from the previously occuring PID value when
     // sorted alphabetically by PIDs.
-    $offset = 0;
+    $offset = $use_offset;
     $total = 0;
     $numFound = $tmp['response']['numFound'] - $offset;
     // repeatedly call this to process this many records each time:
@@ -524,6 +530,16 @@ function upitt_islandora_inventory_audit_populate_achunkof_islandora_pid($offset
   $query_processor->solrStart = $offset;
   $query_processor->solrLimit = UPITT_ISLANDORA_INVENTORY_SOLR_CHUNKSIZE;
   $query_processor->solrParams = array('fl' => 'PID', 'sort' => 'PID ASC');
+  $starting_date_filter = (variable_get('upitt_islandora_inventory_audit_islandora_start_date', '')) ?
+      variable_get('upitt_islandora_inventory_audit_islandora_start_date', '') . ' TO NOW' : '';
+  if ($starting_date_filter) {
+    /*
+     * f%5B0%5D=mods_originInfo_type_sort_dateOther_dt%3A%5B1884-01-01T00%3A00%3A00Z%20TO%201914-01-01T00%3A00%3A00Z%5D
+     * fgs_createdDate_dt:[2017-03-29T00%3A00%3A00Z TO NOW]
+     * "fgs_createdDate_dt:[1884-01-01T00:00:00Z TO NOW]",
+     */
+    $query_processor->solrParams['fq'] = 'fgs_createdDate_dt:[' . $starting_date_filter . ']';
+  }
 
   $url = parse_url(variable_get('islandora_solr_url', 'localhost:8080/solr'));
   $solr = new Apache_Solr_Service($url['host'], $url['port'], $url['path'] . '/');

@@ -459,6 +459,41 @@ function upitt_islandora_inventory_audit_get_page_details_for_barcode($barcode, 
   return array('count' => $count, 'header' => $header_wf_io, 'rows' => $rows, 'pager' => '', 'total_object_count' => '', 'report_detail' => $report_detail);
 }
 
+function upitt_islandora_inventory_audit_get_batch_external_id_for_bigfoot() {
+  global $databases;
+  set_time_limit(0);
+
+  $drupal_database_name = $databases['default']['default']['database'];
+  $workflow_database_name = $databases['default']['mysql_new_workflow']['database'];
+
+  // SQL must be like this with a temporary table because the barcode needed to use for 
+  // the subsequent update needs to be the parent-level object.
+  $sql_wf = "SELECT * FROM (SELECT ta.barcode, ta.bigfoot_path, ta.in_all_ingests " .
+    "FROM upitt_islandora_audit_items_bigfoot ta ORDER BY ta.barcode) as tmp_table " .
+    "GROUP BY bigfoot_path";
+
+  $result_wf = db_query($sql_wf);
+  $result_wf->execute();
+
+  $header_wf_io = array('bigfoot TIF filename', 'islandora_pid');
+  $batches_updated = 0;
+  while($record = $result_wf->fetchAssoc()) {
+    // Run an update on this record's bigfoot_path
+    $sql = "UPDATE `" . $drupal_database_name . "`.upitt_islandora_audit_items_bigfoot ta " .
+            "SET ta.batch_external_id = (" .
+            " SELECT b.batch_external_id " .
+            " FROM `" . $workflow_database_name . "`.item i " .
+            " JOIN `" . $workflow_database_name . "`.batch_item bi ON i.id = bi.item_id " .
+            " JOIN `" . $workflow_database_name . "`.batch b ON b.batch_id = bi.batch_id " .
+            " WHERE i.do_id = '" . $record['barcode'] . "' LIMIT 1) " .
+            "WHERE ta.bigfoot_path = '" . $record['bigfoot_path'] . "'";
+    $insert_d = db_query($sql);
+    $batches_updated++;
+  }
+  echo '<h3>Done updating</h3><p>All of the items for ' . $batches_updated .' ' .
+    'batches updated to populate their batch_external_id (batch name) value.</p>';
+}
+
 function upitt_islandora_inventory_audit_get_page_detail_table($page, $filters, $barcode, $csv_download) {
   if ($barcode) {
     return upitt_islandora_inventory_audit_get_page_details_for_barcode($barcode, $csv_download);
@@ -699,6 +734,7 @@ function upitt_islandora_inventory_audit_get_fields($real_tablename) {
       break;
 
     case 'upitt_islandora_audit_items_bigfoot':
+      $return['fields'][] = 'ta.batch_external_id';
       $return['fields'][] = 'ta.barcode';
       $return['fields'][] = 'ta.bigfoot_path';
       $return['fields'][] = 'ta.in_all_ingests';

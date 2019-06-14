@@ -105,6 +105,7 @@ function upitt_islandora_inventory_audit_admin_form() {
     'bigfoot' => array(
       '#type' => 'fieldset',
       '#title' => number_format($inventory_record_counts['upitt_islandora_audit_items_bigfoot']) . ' bigfoot object files',
+      '#suffix' => '<b>' . l('Populate Records with batch name', '/admin/islandora/inventory_audit/islandora_inventory_populate_batch_name') . '</b>',
       'sync_bigfoot' => array(
         '#type' => 'submit',
         '#value' => t('Inventory bigfoot'),

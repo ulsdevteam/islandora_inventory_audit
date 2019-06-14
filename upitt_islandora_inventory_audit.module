@@ -43,6 +43,13 @@ function upitt_islandora_inventory_audit_menu() {
       'type' => MENU_NORMAL_ITEM,
       'access arguments' => array(UPITT_ISLANDORA_INVENTORY_AUDIT),
     ),
+    'admin/islandora/inventory_audit/islandora_inventory_populate_batch_name' => array(
+      'page callback' => 'drupal_get_form',
+      'page arguments' => array('upitt_islandora_inventory_audit_get_batch_external_id_for_bigfoot'),
+      'type' => MENU_CALLBACK,
+      'file' => 'includes/reports.form.inc',
+      'access arguments' => array(UPITT_ISLANDORA_INVENTORY_AUDIT),
+    ),
     // report handler
     'admin/islandora/inventory_audit/reports/%/%' => array(
       'page callback' => 'upitt_islandora_inventory_audit_reports_report',

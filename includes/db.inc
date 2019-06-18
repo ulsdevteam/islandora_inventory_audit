@@ -346,8 +346,8 @@ function upitt_islandora_inventory_audit_populate_bigfoot_path() {
       $path = (isset($path_info['dirname']) ? $path_info['dirname'] : '/');
       $fname_only = $path_info['filename'];
 
-      if (strstr($file, '.mods.xml')/* || strstr($file, '.dc.xml') */) {
-        $barcode = str_replace(array($path . '/', '.mods.xml'/*, '.dc.xml'*/),
+      if (strstr($file, '.mods.xml')) {
+        $barcode = str_replace(array($path . '/', '.mods.xml'),
                 "", $file);
         $upcase_barcode = strtoupper($barcode);
         if ($last_barcode <> $upcase_barcode) {
@@ -355,8 +355,7 @@ function upitt_islandora_inventory_audit_populate_bigfoot_path() {
           $last_barcode = $upcase_barcode;
         }
       }
-//       elseif (isset($fn_parts[0]) && isset($fn_parts[1]) && ($fn_parts[1] == 'tif' || $fn_parts[1] == 'tiff') && is_numeric($fn_parts[0])) {
-      elseif (($path_info['extension'] == 'tif') || ($path_info['extension'] == 'tiff')) {
+      elseif (array_key_exists('extension', $path_info) && (($path_info['extension'] == 'tif') || ($path_info['extension'] == 'tiff'))) {
         // For this section, the barcode can come from the filename
         $path_parts = explode("/", $path);
         $barcode = (count($path_parts) > 0) ? $path_parts[count($path_parts) - 1] : '';
@@ -367,7 +366,8 @@ function upitt_islandora_inventory_audit_populate_bigfoot_path() {
         // Look at the filename -- if it looks like it is a page object (####.tif), then add that reference as
         // a barcode value like 31234567809-0041.
         $upcased_fname = strtoupper($fname_only);
-        if (array_search($upcased_fname, $ignore_these_upcased_filenames) === FALSE) {
+        if ($upcased_fname <> 'TARGET.TIF') {
+//        if (array_search($upcased_fname, $ignore_these_upcased_filenames) === FALSE) {
           upitt_islandora_inventory_audit_insert('bigfoot', array('bigfoot_path' => $path, 'barcode' => $pseudo_barcode));
         }
       }

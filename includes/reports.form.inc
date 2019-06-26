@@ -26,6 +26,13 @@ define('UPITT_ISLANDORA_INVENTORY_AUDIT_PAGE_DETAIL_REPORT_PAGESIZE', 100);
 
 function upitt_islandora_inventory_audit_reports_form() {
   module_load_include('inc', 'upitt_islandora_inventory_audit', 'includes/db');
+  $breadcrumb = array(
+    l(t('Home'), '<front>'),
+    l(t('Islandora Inventory Audit Configuration'), 'admin/islandora/inventory_audit'),
+    t('Islandora Inventory Audit Reports'),
+  );
+  drupal_set_breadcrumb($breadcrumb);
+
   $inventory_record_counts = upitt_islandora_inventory_all_record_counts();
   $form = array(
     'frame' => array(
@@ -114,16 +121,27 @@ function upitt_islandora_inventory_audit_reports_report($table, $exclusive_strin
       $report = upitt_islandora_inventory_audit_get_datastreamfilesize_report($sort, $order, $year, $csv_download);
       $query_string_removed_year = upitt_islandora_inventory_remove_param($_SERVER['QUERY_STRING'], 'year');
       $year_links = upitt_islandora_inventory_audit_get_data_years($get_from_uri . '?' . $query_string_removed_year . '&');
+      $report_name = 'Datastream file size by Depositor';
       break;
 
     case 'page_detail':
       $report = upitt_islandora_inventory_audit_get_page_detail_table($page, $filters, $barcode, $csv_download);
+      $report_name = 'Bigfoot - Islandora page difference';
       break;
 
     default:
       $report = upitt_islandora_inventory_audit_get_report_table($table, $exclusive, $page, $filters, $csv_download);
+      $report_name = ucwords($table) . ' (' . $exclusive_string . ') report';
       break;
   }
+
+  $breadcrumb = array(
+    l(t('Home'), '<front>'),
+    l(t('Islandora Inventory Audit Configuration'), 'admin/islandora/inventory_audit'),
+    l(t('Islandora Inventory Audit Reports'), 'admin/islandora/inventory_audit/reports'),
+    t($report_name),
+  );
+  drupal_set_breadcrumb($breadcrumb);
 
   // Set full record count
   $count_rows = $report['count'];
@@ -466,16 +484,17 @@ function upitt_islandora_inventory_audit_get_batch_external_id_for_bigfoot() {
   $drupal_database_name = $databases['default']['default']['database'];
   $workflow_database_name = $databases['default']['mysql_new_workflow']['database'];
 
-  // SQL must be like this with a temporary table because the barcode needed to use for 
-  // the subsequent update needs to be the parent-level object.
-  $sql_wf = "SELECT * FROM (SELECT ta.barcode, ta.bigfoot_path, ta.in_all_ingests " .
-    "FROM upitt_islandora_audit_items_bigfoot ta ORDER BY ta.barcode) as tmp_table " .
-    "GROUP BY bigfoot_path";
+  $sql_wf = "SELECT ta.barcode, ta.bigfoot_path " .
+      "FROM `" . $drupal_database_name . "`.upitt_islandora_audit_items_bigfoot ta " .
+      "LEFT JOIN `" . $drupal_database_name . "`.upitt_islandora_audit_items_islandora ai ON (ta.barcode = ai.barcode) " .
+      "WHERE ai.barcode IS NULL " .
+      "GROUP BY ta.bigfoot_path";
 
   $result_wf = db_query($sql_wf);
   $result_wf->execute();
 
   $header_wf_io = array('bigfoot TIF filename', 'islandora_pid');
+
   $batches_updated = 0;
   while($record = $result_wf->fetchAssoc()) {
     // Run an update on this record's bigfoot_path
@@ -490,8 +509,7 @@ function upitt_islandora_inventory_audit_get_batch_external_id_for_bigfoot() {
     $insert_d = db_query($sql);
     $batches_updated++;
   }
-  echo '<h3>Done updating</h3><p>All of the items for ' . $batches_updated .' ' .
-    'batches updated to populate their batch_external_id (batch name) value.</p>';
+  echo 'All of the items for ' . $batches_updated . ' batches updated to populate their batch_external_id (batch name) value.';
 }
 
 function upitt_islandora_inventory_audit_get_page_detail_table($page, $filters, $barcode, $csv_download) {
